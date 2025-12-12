@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosClient';
 import PaymentModal from '../../components/common/PaymentModal';
@@ -15,22 +15,37 @@ const Home: React.FC = () => {
 
   // Fetch data in background
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchData = async () => {
       try {
         const [progRes, eventRes] = await Promise.all([
           apiClient.get('/programs'),
           apiClient.get('/events')
         ]);
-        setPrograms(progRes.data);
-        setEvents(eventRes.data.slice(0, 3)); // Only show top 3 events
+        
+        if (isMounted) {
+          setPrograms(progRes.data);
+          setEvents(eventRes.data.slice(0, 3)); // Only show top 3 events
+        }
       } catch (error) {
         console.error("Failed to load home data", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+    
     fetchData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // Memoize displayed programs and events
+  const displayedPrograms = useMemo(() => programs.slice(0, 3), [programs]);
 
   // Skeleton Loader Component (Gray Box Placeholder)
   const SkeletonCard = () => (
@@ -104,7 +119,7 @@ const Home: React.FC = () => {
               </>
             ) : (
               // Show Real Data when ready
-              programs.slice(0, 3).map((program) => (
+              displayedPrograms.map((program) => (
                 <ProgramCard 
                   key={program._id} 
                   program={program} 
@@ -177,6 +192,7 @@ const Home: React.FC = () => {
                       src={event.image} 
                       alt={event.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      loading="lazy"
                     />
                     <div className="absolute top-2 left-2 bg-white/90 backdrop-blur rounded p-2 text-center min-w-[3.5rem] shadow-sm">
                       <span className="block text-xs font-bold text-red-500 uppercase">
@@ -238,4 +254,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
+export default memo(Home);

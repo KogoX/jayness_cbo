@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import apiClient from '../../api/axiosClient';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import type { Testimonial, GalleryItem } from '../../types/impact.types';
@@ -13,24 +13,49 @@ const Impact: React.FC<ImpactProps> = ({ isDashboard = false }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchData = async () => {
       try {
         const [tRes, gRes] = await Promise.all([
           apiClient.get('/impact/testimonials'),
           apiClient.get('/impact/gallery')
         ]);
-        setTestimonials(tRes.data);
-        setGallery(gRes.data);
+        
+        if (isMounted) {
+          setTestimonials(tRes.data);
+          setGallery(gRes.data);
+        }
       } catch (error) {
         console.error("Failed to load impact data");
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+    
     fetchData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (loading) return <div className="h-96 flex items-center justify-center"><LoadingSpinner /></div>;
+  // Memoize filtered gallery items for performance
+  const videos = useMemo(() => gallery.filter(g => g.type === 'video'), [gallery]);
+  const images = useMemo(() => gallery.filter(g => g.type === 'image'), [gallery]);
+
+  // Show skeleton loader only for initial load, not blocking the page
+  if (loading && testimonials.length === 0 && gallery.length === 0) {
+    return (
+      <div className={`${isDashboard ? '' : 'min-h-screen'} bg-white`}>
+        <div className="h-96 flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen">
@@ -57,11 +82,11 @@ const Impact: React.FC<ImpactProps> = ({ isDashboard = false }) => {
       {/* CONTENT */}
       <div>
         {/* Videos */}
-        {gallery.filter(g => g.type === 'video').length > 0 && (
+        {videos.length > 0 && (
           <section className={`max-w-5xl mx-auto px-4 ${isDashboard ? 'py-6' : 'py-16'}`}>
             <h2 className="text-xl font-bold text-gray-800 mb-6 text-center border-b pb-2">Featured Stories</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {gallery.filter(g => g.type === 'video').map(video => (
+              {videos.map(video => (
                 <div key={video._id} className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-sm relative">
                   <iframe 
                     width="100%" height="100%" 
@@ -92,6 +117,7 @@ const Impact: React.FC<ImpactProps> = ({ isDashboard = false }) => {
                         src={t.image || 'https://via.placeholder.com/100'} 
                         alt={t.name} 
                         className="w-10 h-10 rounded-full object-cover border border-primary" 
+                        loading="lazy"
                       />
                       <div>
                         <h4 className="font-bold text-gray-900 text-sm">{t.name}</h4>
@@ -106,28 +132,31 @@ const Impact: React.FC<ImpactProps> = ({ isDashboard = false }) => {
         )}
 
         {/* Photo Gallery */}
-        <section className={`max-w-7xl mx-auto px-4 ${isDashboard ? 'py-8' : 'py-20'}`}>
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-800">Gallery</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {gallery.filter(g => g.type === 'image').map((img) => (
+        {images.length > 0 && (
+          <section className={`max-w-7xl mx-auto px-4 ${isDashboard ? 'py-8' : 'py-20'}`}>
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800">Gallery</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {images.map((img) => (
               <div key={img._id} className="group relative overflow-hidden rounded-xl h-48 cursor-pointer">
                 <img 
                   src={img.src} 
                   alt="Gallery" 
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                    <span className="text-white text-xs font-bold border border-white px-3 py-1 rounded-full">{img.category}</span>
                 </div>
               </div>
             ))}
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
 };
 
-export default Impact;
+export default memo(Impact);

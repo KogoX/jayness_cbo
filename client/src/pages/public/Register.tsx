@@ -62,7 +62,7 @@ const Register: React.FC = () => {
               value={formData.name}
               onChange={handleChange}
               required
-              className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="e.g. John Doe"
             />
           </div>
@@ -77,7 +77,7 @@ const Register: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="johndoe@example.com"
             />
           </div>
@@ -92,14 +92,14 @@ const Register: React.FC = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="••••••••"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700 focus:outline-none"
+            className="w-full rounded-md bg-primary px-4 py-2 text-white transition hover:bg-purple-700 focus:outline-none shadow-md hover:shadow-lg"
           >
             Register
           </button>
@@ -107,7 +107,7 @@ const Register: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <a href="/login" className="text-blue-600 hover:underline">
+          <a href="/login" className="text-primary hover:underline font-medium">
             Log in here
           </a>
         </p>

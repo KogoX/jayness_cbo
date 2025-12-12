@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import apiClient from '../../api/axiosClient';
 
 const ForgotPassword: React.FC = () => {
@@ -34,10 +34,10 @@ const ForgotPassword: React.FC = () => {
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-gray-300 p-2"
+            className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             required
           />
-          <button type="submit" className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+          <button type="submit" className="w-full rounded-md bg-primary px-4 py-2 text-white hover:bg-purple-700 transition shadow-md hover:shadow-lg">
             Send Reset Link
           </button>
         </form>
@@ -46,4 +46,4 @@ const ForgotPassword: React.FC = () => {
   );
 };
 
-export default ForgotPassword;
+export default memo(ForgotPassword);

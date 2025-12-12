@@ -68,7 +68,7 @@ const Login: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="name@example.com"
             />
           </div>
@@ -83,27 +83,27 @@ const Login: React.FC = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="••••••••"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700 focus:outline-none"
+            className="w-full rounded-md bg-primary px-4 py-2 text-white transition hover:bg-purple-700 focus:outline-none shadow-md hover:shadow-lg"
           >
             Log In
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-            <a href="/forgot-password" className="text-blue-600 hover:underline">
+            <a href="/forgot-password" className="text-primary hover:underline font-medium">
                 Forgot Password?
             </a>
         </p>
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Don't have an account?{' '}
-          <a href="/register" className="text-blue-600 hover:underline">
+          <a href="/register" className="text-primary hover:underline font-medium">
             Sign up here
           </a>
         </p>
