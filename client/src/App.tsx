@@ -88,6 +88,7 @@ function App() {
             <Route path="events/:id" element={<EventDetails />} />
             <Route path="impact" element={<Impact />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="impact" element={<Impact isDashboard={true} />} />
           </Route> 
 
           <Route element={<AdminRoute />}>
