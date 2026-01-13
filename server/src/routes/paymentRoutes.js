@@ -19,6 +19,6 @@ router.post('/callback', mpesaCallback);
 router.get('/status/:checkoutRequestID', checkPaymentStatus);
 
 // 5. Get user's history
-router.get('/myhistory', protect, getMyHistory);
+router.get('/history', protect, getMyHistory);
 
 module.exports = router;
