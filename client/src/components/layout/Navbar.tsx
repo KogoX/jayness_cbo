@@ -83,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onMenuClick }) => {
           
           {/* --- LOGO & BRAND NAME (Mobile Only) --- */}
           <div className="flex items-center gap-2 lg:hidden">
-            <img src="/assets/logo.svg" alt="Jayness Logo" className="h-8 w-auto" />
+            <img src="logo.svg" alt="Logo" className="h-8 w-auto" />
             <span className="text-xl font-bold text-primary">Jayness Foundation</span>
           </div>
 

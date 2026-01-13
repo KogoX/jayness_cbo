@@ -10,8 +10,8 @@ const Footer: React.FC = () => {
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             {/* Logo Image */}
-            <img src="/logo.png" alt="Jayness Logo" className="h-10 w-auto bg-white rounded-full p-1" />
-            <span className="text-2xl font-bold">Jayness CBO</span>
+            <img src="/logo.svg" alt="Jayness Logo" className="h-10 w-auto bg-white rounded-full p-1" />
+            <span className="text-2xl font-bold">Jayness Foundation</span>
           </div>
           <p className="text-gray-400 leading-relaxed max-w-sm">
             Empowering communities through education, healthcare, and sustainable development. 

@@ -7,9 +7,9 @@ const About: React.FC = () => {
       {/* 1. HERO */}
       <section className="bg-gray-50 py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">About Jayness CBO</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">About Jayness Foundation</h1>
           <p className="text-xl text-gray-600 leading-relaxed">
-            [cite_start]Founded by Agnes Wanjiru, Jayness CBO was born from a desire to promote inclusive growth and empower those left behind in our community[cite: 39, 42].
+            Founded by Agnes Wanjiru, Jayness Community Based Organization was born from a desire to promote inclusive growth and empower those left behind in our community.
           </p>
         </div>
       </section>
@@ -23,7 +23,7 @@ const About: React.FC = () => {
             <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-2xl mb-6">👁️</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Vision</h2>
             <p className="text-gray-700 leading-relaxed">
-              [cite_start]A just, resilient, and inclusive community where every individual can realize their potential and contribute meaningfully to society[cite: 50].
+              A just, resilient, and inclusive community where every individual can realize their potential and contribute meaningfully to society.
             </p>
           </div>
 
@@ -32,7 +32,7 @@ const About: React.FC = () => {
             <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center text-2xl mb-6">🚀</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Mission</h2>
             <p className="text-gray-700 leading-relaxed">
-              [cite_start]To empower vulnerable and marginalized community members by delivering life-changing services in education, health, economic empowerment, and advocacy[cite: 51].
+              To empower vulnerable and marginalized community members by delivering life-changing services in education, health, economic empowerment, and advocacy.
             </p>
           </div>
         </div>
