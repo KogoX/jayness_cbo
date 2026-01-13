@@ -1,76 +1,59 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="bg-white border-t border-gray-200 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Column 1: Brand & Motto */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold text-primary">Jayness CBO</h3>
-            <p className="text-sm text-gray-500 italic">
-              "Stronger Together"
-            </p>
-            <p className="text-sm text-gray-500">
-              Empowering communities through healthcare, education, and economic inclusion.
-            </p>
+    <footer className="bg-gray-900 text-white pt-16 pb-8">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        
+        {/* 1. BRAND & LOGO SECTION */}
+        <div className="col-span-1 md:col-span-2">
+          <div className="flex items-center gap-3 mb-4">
+            {/* Logo Image */}
+            <img src="/logo.png" alt="Jayness Logo" className="h-10 w-auto bg-white rounded-full p-1" />
+            <span className="text-2xl font-bold">Jayness CBO</span>
           </div>
-
-          {/* Column 2: Quick Links */}
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="/dashboard" className="text-gray-600 hover:text-primary transition">
-                  Dashboard Overview
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-600 hover:text-primary transition">
-                  Our Programs
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-600 hover:text-primary transition">
-                  Events Calendar
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-600 hover:text-primary transition">
-                  Contact Support
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Contact & Legal */}
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-4">Contact Us</h4>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-center gap-2">
-                <span>📧</span> support@jaynesscbo.org
-              </li>
-              <li className="flex items-center gap-2">
-                <span>📞</span> +254 700 000 000
-              </li>
-              <li className="flex items-center gap-2">
-                <span>📍</span> Nairobi, Kenya
-              </li>
-            </ul>
-          </div>
+          <p className="text-gray-400 leading-relaxed max-w-sm">
+            Empowering communities through education, healthcare, and sustainable development. 
+            Join us in making a difference today.
+          </p>
         </div>
 
-        {/* Bottom Bar: Copyright */}
-        <div className="border-t border-gray-100 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-400">
-          <p>© {currentYear} Jayness Community Based Organization. All rights reserved.</p>
-          <div className="flex gap-4 mt-4 md:mt-0">
-            <a href="#" className="hover:text-primary">Privacy Policy</a>
-            <a href="#" className="hover:text-primary">Terms of Service</a>
-          </div>
+        {/* 2. QUICK LINKS */}
+        <div>
+          <h3 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2 inline-block">Quick Links</h3>
+          <ul className="space-y-3 text-gray-400">
+            <li><Link to="/" className="hover:text-primary transition">Home</Link></li>
+            <li><Link to="/about" className="hover:text-primary transition">About Us</Link></li>
+            <li><Link to="/programs" className="hover:text-primary transition">Our Programs</Link></li>
+            <li><Link to="/impact" className="hover:text-primary transition">Impact Stories</Link></li>
+            <li><Link to="/contact" className="hover:text-primary transition">Contact Us</Link></li>
+          </ul>
         </div>
+
+        {/* 3. CONTACT INFO */}
+        <div>
+          <h3 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2 inline-block">Contact</h3>
+          <ul className="space-y-3 text-gray-400">
+            <li className="flex items-start gap-3">
+              <span className="mt-1">📍</span>
+              <span>123 Community Road,<br/>Nairobi, Kenya</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span>📞</span>
+              <span>+254 700 000 000</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span>✉️</span>
+              <span>info@jayness-cbo.org</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* COPYRIGHT */}
+      <div className="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
+        <p>&copy; {new Date().getFullYear()} Jayness Community Based Organization. All rights reserved.</p>
       </div>
     </footer>
   );
