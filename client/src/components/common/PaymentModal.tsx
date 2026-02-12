@@ -1,40 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import apiClient from '../../api/axiosClient';
 import LoadingSpinner from './LoadingSpinner';
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  programId?: string; // Optional (undefined = General Contribution)
-  programTitle?: string; // Optional title for display
+  programId?: string;
+  programTitle?: string;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId, programTitle }) => {
-  // --- 1. STATE (Must be at the top) ---
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [amount, setAmount] = useState<string | number>(1000); 
+  const [amount, setAmount] = useState<string | number>(1000);
   const [loading, setLoading] = useState(false);
-  
+
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Polling State
   const [isPolling, setIsPolling] = useState(false);
   const [checkoutRequestID, setCheckoutRequestID] = useState<string | null>(null);
 
-  // --- 2. RESET EFFECT ---
   useEffect(() => {
     if (isOpen) {
-        setAmount(programId ? '' : 1000);
-        setPhoneNumber('');
-        setMessage(null);
-        setError(null);
-        setIsPolling(false);
-        setLoading(false);
+      setAmount(programId ? '' : 1000);
+      setPhoneNumber('');
+      setMessage(null);
+      setError(null);
+      setIsPolling(false);
+      setLoading(false);
+      setCheckoutRequestID(null);
     }
   }, [isOpen, programId]);
 
-  // --- 3. HELPER: PHONE FORMATTER ---
   const formatPhoneNumber = (phone: string) => {
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
@@ -43,9 +40,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
     return cleanPhone;
   };
 
-  // --- 4. POLLING LOGIC ---
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
     if (isPolling && checkoutRequestID) {
       interval = setInterval(async () => {
@@ -54,30 +50,55 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
           const status = response.data.status;
 
           if (status === 'Completed') {
-            setMessage('✅ Payment Received! Thank you.');
+            setMessage('Payment received successfully. Thank you.');
             setError(null);
             setIsPolling(false);
             setLoading(false);
-            
+
             setTimeout(() => {
               onClose();
             }, 3000);
           } else if (status === 'Failed') {
-            setError('❌ Payment Failed or Cancelled.');
+            setError('Payment failed. Please try again.');
+            setMessage(null);
+            setIsPolling(false);
+            setLoading(false);
+          } else if (status === 'Cancelled') {
+            setError('Payment was cancelled.');
             setMessage(null);
             setIsPolling(false);
             setLoading(false);
           }
         } catch (err) {
-          console.error("Polling error", err);
+          console.error('Polling error', err);
         }
-      }, 3000); 
+      }, 3000);
     }
 
     return () => clearInterval(interval);
   }, [isPolling, checkoutRequestID, onClose]);
 
-  // --- 5. SUBMIT HANDLER ---
+  const handleCancelTransaction = async () => {
+    if (!checkoutRequestID) {
+      setLoading(false);
+      setIsPolling(false);
+      onClose();
+      return;
+    }
+
+    try {
+      await apiClient.patch(`/payments/cancel/${checkoutRequestID}`);
+      setError('Payment was cancelled.');
+      setMessage(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not cancel payment.');
+    } finally {
+      setIsPolling(false);
+      setLoading(false);
+      setCheckoutRequestID(null);
+    }
+  };
+
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -85,7 +106,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
     setError(null);
 
     const formattedPhone = formatPhoneNumber(phoneNumber);
-    
+
     if (formattedPhone.length !== 12 || !formattedPhone.startsWith('254')) {
       setError('Invalid phone number. Use 07... or 01...');
       setLoading(false);
@@ -99,31 +120,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
     }
 
     try {
-      // DYNAMIC URL SELECTION
-      // Check if user is logged in (has token)
       const token = localStorage.getItem('token');
-      
-      // If logged in -> Use Protected Route (Tracks User ID)
-      // If public -> Use Public Route (Anonymous)
       const endpoint = token ? '/payments/pay' : '/payments/public/pay';
 
       const response = await apiClient.post(endpoint, {
         phoneNumber: formattedPhone,
         amount: Number(amount),
-        programId: programId 
+        programId: programId,
       });
 
-      console.log(response.data);
-      setMessage(`📲 Sent to ${formattedPhone}! Check your phone.`);
-      
+      setMessage(`Prompt sent to ${formattedPhone}. Check your phone.`);
+
       if (response.data?.data?.CheckoutRequestID) {
         setCheckoutRequestID(response.data.data.CheckoutRequestID);
         setIsPolling(true);
       } else {
-        setError("Error: No Checkout ID returned");
+        setError('Error: No Checkout ID returned');
         setLoading(false);
       }
-
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Payment failed to initiate.');
@@ -131,14 +145,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
     }
   };
 
-  // --- 6. CONDITIONAL RETURN (MUST BE LAST) ---
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border-t-4 border-secondary transform transition-all">
-        
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-xl font-bold text-gray-800">
@@ -146,40 +157,41 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             </h3>
             {programTitle && <p className="text-sm text-primary font-medium">{programTitle}</p>}
           </div>
-          <button 
-            onClick={onClose} 
-            disabled={loading} 
-            className="text-gray-400 hover:text-red-500 transition disabled:opacity-50"
+          <button
+            onClick={isPolling ? handleCancelTransaction : onClose}
+            className="text-gray-400 hover:text-red-500 transition"
           >
-            ✕
+            x
           </button>
         </div>
 
-        {/* Alerts */}
         {message && (
-          <div className="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 border border-green-200 flex items-center gap-2">
-            <span className="animate-pulse">🟢</span> {message}
+          <div className="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 border border-green-200">
+            {message}
           </div>
         )}
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-200">
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
-        {/* Loading State */}
         {loading && isPolling ? (
           <div className="flex flex-col items-center justify-center py-6">
             <LoadingSpinner />
             <p className="text-sm text-gray-500 mt-4 animate-pulse">Waiting for M-Pesa PIN...</p>
+            <button
+              type="button"
+              onClick={handleCancelTransaction}
+              className="mt-4 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+            >
+              Cancel Transaction
+            </button>
           </div>
         ) : (
-          /* Form */
           <form onSubmit={handlePayment} className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">
-                Amount (Ksh)
-              </label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Amount (Ksh)</label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-500 font-bold">Ksh</span>
                 <input
@@ -195,9 +207,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">
-                M-Pesa Number
-              </label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">M-Pesa Number</label>
               <input
                 type="text"
                 placeholder="07XX XXX XXX"
@@ -212,7 +222,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={isPolling ? handleCancelTransaction : onClose}
                 className="flex-1 px-4 py-3 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
                 Cancel

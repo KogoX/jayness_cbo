@@ -6,7 +6,7 @@ interface PaymentRecord {
   _id: string;
   amount: number;
   mpesaReceiptNumber: string;
-  status: 'Pending' | 'Completed' | 'Failed';
+  status: 'Pending' | 'Completed' | 'Failed' | 'Cancelled';
   createdAt: string;
   phoneNumber: string;
 }
@@ -120,7 +120,7 @@ const Financials: React.FC = () => {
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                         ${t.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                          t.status === 'Failed' ? 'bg-red-100 text-red-800' : 
+                          t.status === 'Failed' || t.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
                           'bg-yellow-100 text-yellow-800'}`}>
                         {t.status}
                       </span>
