@@ -82,6 +82,32 @@ const queryStkStatusFromMpesa = async (checkoutRequestID) => {
   return response.data;
 };
 
+const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
+  if (payment.status !== 'Pending') {
+    return payment;
+  }
+
+  try {
+    const mpesaStatus = await queryStkStatusFromMpesa(checkoutRequestID);
+    const mappedStatus = mapMpesaResultCodeToStatus(mpesaStatus.ResultCode);
+
+    if (mappedStatus === 'Completed') {
+      await markPaymentCompleted(
+        payment,
+        mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber || 'N/A'
+      );
+    } else if (mappedStatus === 'Failed' || mappedStatus === 'Cancelled') {
+      payment.status = mappedStatus;
+      await payment.save();
+    }
+  } catch (queryError) {
+    // Callback may still arrive; keep Pending if query fails/transient.
+    console.error('STK Query Error:', queryError.response ? queryError.response.data : queryError.message);
+  }
+
+  return payment;
+};
+
 // 1. Middleware to generate M-Pesa Access Token
 const getAccessToken = async (req, res, next) => {
   const consumer_key = process.env.MPESA_CONSUMER_KEY.trim();
@@ -220,22 +246,7 @@ const checkPaymentStatus = async (req, res) => {
       return res.status(404).json({ message: 'Payment record not found' });
     }
 
-    if (payment.status === 'Pending') {
-      try {
-        const mpesaStatus = await queryStkStatusFromMpesa(checkoutRequestID);
-        const mappedStatus = mapMpesaResultCodeToStatus(mpesaStatus.ResultCode);
-
-        if (mappedStatus === 'Completed') {
-          await markPaymentCompleted(payment, mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber || 'N/A');
-        } else if (mappedStatus === 'Failed' || mappedStatus === 'Cancelled') {
-          payment.status = mappedStatus;
-          await payment.save();
-        }
-      } catch (queryError) {
-        // Callback may still arrive; keep Pending if query fails/transient.
-        console.error('STK Query Error:', queryError.response ? queryError.response.data : queryError.message);
-      }
-    }
+    await refreshPendingPaymentStatus(payment, checkoutRequestID);
 
     const latest = await Payment.findOne({ checkoutRequestID });
 
@@ -250,7 +261,45 @@ const checkPaymentStatus = async (req, res) => {
   }
 };
 
-// 5. Cancel Pending Payment
+// 5. Get Payment Receipt (Only confirmed payments)
+const getPaymentReceipt = async (req, res) => {
+  try {
+    const { checkoutRequestID } = req.params;
+
+    const payment = await Payment.findOne({ checkoutRequestID });
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment record not found' });
+    }
+
+    await refreshPendingPaymentStatus(payment, checkoutRequestID);
+
+    const latest = await Payment.findOne({ checkoutRequestID })
+      .populate('user', 'name email')
+      .populate('programId', 'title');
+
+    if (!latest || latest.status !== 'Completed') {
+      return res.status(400).json({ message: 'Receipt available only after payment confirmation' });
+    }
+
+    res.status(200).json({
+      checkoutRequestID: latest.checkoutRequestID,
+      receiptNumber: latest.mpesaReceiptNumber,
+      amount: latest.amount,
+      phoneNumber: latest.phoneNumber,
+      transactionDate: latest.transactionDate || latest.updatedAt || latest.createdAt,
+      status: latest.status,
+      payerName: latest.user?.name || 'Anonymous Donor',
+      payerEmail: latest.user?.email || null,
+      programTitle: latest.programId?.title || 'General Contribution',
+      issuedAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Get Receipt Error:', error);
+    res.status(500).json({ message: 'Could not generate receipt' });
+  }
+};
+
+// 6. Cancel Pending Payment
 const cancelPendingPayment = async (req, res) => {
   try {
     const { checkoutRequestID } = req.params;
@@ -278,7 +327,7 @@ const cancelPendingPayment = async (req, res) => {
   }
 };
 
-// 5. Get My Transaction History
+// 7. Get My Transaction History
 const getMyHistory = async (req, res) => {
   try {
     // Only works if user is logged in
@@ -301,6 +350,7 @@ module.exports = {
   initiateSTKPush, 
   mpesaCallback, 
   checkPaymentStatus, 
+  getPaymentReceipt,
   cancelPendingPayment,
   getMyHistory 
 };

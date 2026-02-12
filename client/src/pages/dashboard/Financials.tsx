@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../../api/axiosClient';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { downloadReceiptPdf, type ReceiptPayload } from '../../utils/receipt';
 
 interface PaymentRecord {
   _id: string;
+  checkoutRequestID: string;
   amount: number;
   mpesaReceiptNumber: string;
   status: 'Pending' | 'Completed' | 'Failed' | 'Cancelled';
@@ -15,6 +17,7 @@ const Financials: React.FC = () => {
   const [transactions, setTransactions] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Calculate totals
   const totalContributed = transactions
@@ -34,6 +37,18 @@ const Financials: React.FC = () => {
     };
     fetchHistory();
   }, []);
+
+  const handleDownloadReceipt = async (checkoutRequestID: string) => {
+    try {
+      setDownloadingId(checkoutRequestID);
+      const response = await apiClient.get(`/payments/receipt/${checkoutRequestID}`);
+      await downloadReceiptPdf(response.data as ReceiptPayload);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not download receipt.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   if (loading) return <LoadingSpinner />;
 
@@ -92,12 +107,13 @@ const Financials: React.FC = () => {
                 <th className="px-6 py-3">Phone</th>
                 <th className="px-6 py-3">Amount</th>
                 <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Receipt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
                     No transactions found.
                   </td>
                 </tr>
@@ -124,6 +140,20 @@ const Financials: React.FC = () => {
                           'bg-yellow-100 text-yellow-800'}`}>
                         {t.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {t.status === 'Completed' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadReceipt(t.checkoutRequestID)}
+                          disabled={downloadingId === t.checkoutRequestID}
+                          className="px-3 py-1.5 text-xs font-semibold text-white bg-primary rounded-md hover:bg-purple-700 transition disabled:opacity-50"
+                        >
+                          {downloadingId === t.checkoutRequestID ? 'Preparing...' : 'Download'}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Unavailable</span>
+                      )}
                     </td>
                   </tr>
                 ))

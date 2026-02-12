@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAccessToken, initiateSTKPush, mpesaCallback, checkPaymentStatus, cancelPendingPayment, getMyHistory } = require('../controllers/paymentController');
+const { getAccessToken, initiateSTKPush, mpesaCallback, checkPaymentStatus, getPaymentReceipt, cancelPendingPayment, getMyHistory } = require('../controllers/paymentController');
 const { protect } = require('../middleware/authMiddleware'); 
 
 // 1. Authenticated Payment Route (User logs in first)
@@ -18,10 +18,13 @@ router.post('/callback', mpesaCallback);
 // 4. Check status (Frontend checks this while spinner is loading)
 router.get('/status/:checkoutRequestID', checkPaymentStatus);
 
-// 5. Cancel payment (frontend can stop pending checkout)
+// 5. Download receipt (only after confirmed payment)
+router.get('/receipt/:checkoutRequestID', getPaymentReceipt);
+
+// 6. Cancel payment (frontend can stop pending checkout)
 router.patch('/cancel/:checkoutRequestID', cancelPendingPayment);
 
-// 6. Get user's history
+// 7. Get user's history
 router.get('/history', protect, getMyHistory);
 
 module.exports = router;

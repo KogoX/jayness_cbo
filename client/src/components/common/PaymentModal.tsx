@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../../api/axiosClient';
 import LoadingSpinner from './LoadingSpinner';
+import { downloadReceiptPdf, type ReceiptPayload } from '../../utils/receipt';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
 
   const [isPolling, setIsPolling] = useState(false);
   const [checkoutRequestID, setCheckoutRequestID] = useState<string | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -29,6 +32,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
       setIsPolling(false);
       setLoading(false);
       setCheckoutRequestID(null);
+      setIsCompleted(false);
+      setDownloadingReceipt(false);
     }
   }, [isOpen, programId]);
 
@@ -54,20 +59,19 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             setError(null);
             setIsPolling(false);
             setLoading(false);
-
-            setTimeout(() => {
-              onClose();
-            }, 3000);
+            setIsCompleted(true);
           } else if (status === 'Failed') {
             setError('Payment failed. Please try again.');
             setMessage(null);
             setIsPolling(false);
             setLoading(false);
+            setIsCompleted(false);
           } else if (status === 'Cancelled') {
             setError('Payment was cancelled.');
             setMessage(null);
             setIsPolling(false);
             setLoading(false);
+            setIsCompleted(false);
           }
         } catch (err) {
           console.error('Polling error', err);
@@ -96,6 +100,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
       setIsPolling(false);
       setLoading(false);
       setCheckoutRequestID(null);
+      setIsCompleted(false);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (!checkoutRequestID) return;
+
+    setDownloadingReceipt(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.get(`/payments/receipt/${checkoutRequestID}`);
+      await downloadReceiptPdf(response.data as ReceiptPayload);
+      setMessage('Receipt downloaded successfully.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not download receipt.');
+    } finally {
+      setDownloadingReceipt(false);
     }
   };
 
@@ -187,6 +209,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             >
               Cancel Transaction
             </button>
+          </div>
+        ) : isCompleted ? (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 border border-green-200">
+              Payment is confirmed. You can download your receipt now.
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-3 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadReceipt}
+                disabled={downloadingReceipt}
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-primary hover:bg-purple-700 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {downloadingReceipt ? 'Preparing...' : 'Download Receipt'}
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handlePayment} className="space-y-5">
