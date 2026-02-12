@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../../api/axiosClient';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { notifyAuthChanged } from '../../utils/authEvents';
 
 const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,7 @@ const Profile: React.FC = () => {
       });
 
       localStorage.setItem('user', JSON.stringify(data));
+      notifyAuthChanged();
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       
       setOldPassword('');
@@ -97,6 +99,7 @@ const Profile: React.FC = () => {
     if (window.confirm('Are you sure you want to log out?')) {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      notifyAuthChanged();
       window.location.href = '/login';
     }
   };

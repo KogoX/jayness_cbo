@@ -10,7 +10,13 @@ const Footer: React.FC = () => {
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             {/* Logo Image */}
-            <img src="/logo.svg" alt="Jayness Logo" className="h-10 w-auto bg-white rounded-full p-1" />
+            <img
+              src="/logo.svg"
+              alt="Jayness Logo"
+              loading="lazy"
+              decoding="async"
+              className="h-10 w-auto bg-white rounded-full p-1"
+            />
             <span className="text-2xl font-bold">Jayness Foundation</span>
           </div>
           <p className="text-gray-400 leading-relaxed max-w-sm">
@@ -25,7 +31,8 @@ const Footer: React.FC = () => {
           <ul className="space-y-3 text-gray-400">
             <li><Link to="/" className="hover:text-primary transition">Home</Link></li>
             <li><Link to="/about" className="hover:text-primary transition">About Us</Link></li>
-            <li><Link to="/programs" className="hover:text-primary transition">Our Programs</Link></li>
+            <li><Link to="/public/programs" className="hover:text-primary transition">Our Programs</Link></li>
+            <li><Link to="/public/events" className="hover:text-primary transition">Events</Link></li>
             <li><Link to="/impact" className="hover:text-primary transition">Impact Stories</Link></li>
             <li><Link to="/contact" className="hover:text-primary transition">Contact Us</Link></li>
           </ul>

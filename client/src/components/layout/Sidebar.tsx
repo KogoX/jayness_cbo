@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { notifyAuthChanged } from '../../utils/authEvents';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    notifyAuthChanged();
     navigate('/login');
   };
 

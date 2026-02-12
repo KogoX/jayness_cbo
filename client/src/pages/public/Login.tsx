@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosClient';
+import { notifyAuthChanged } from '../../utils/authEvents';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const Login: React.FC = () => {
       // CRITICAL: Save the Token and User Info to browser storage
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data));
+      notifyAuthChanged();
 
       // Redirect to the Dashboard (we will build this next)
       // For now, let's just go to the home page or stay here
@@ -96,22 +98,22 @@ const Login: React.FC = () => {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-            <a href="/forgot-password" className="text-primary hover:underline font-medium">
+            <Link to="/forgot-password" className="text-primary hover:underline font-medium">
                 Forgot Password?
-            </a>
+            </Link>
         </p>
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Don't have an account?{' '}
-          <a href="/register" className="text-primary hover:underline font-medium">
+          <Link to="/register" className="text-primary hover:underline font-medium">
             Sign up here
-          </a>
+          </Link>
         </p>
         <p className="mt-2 text-center text-sm text-gray-500">
           Looking for support?{' '}
-          <a href="/join" className="text-primary hover:underline">
+          <Link to="/join" className="text-primary hover:underline">
             Apply as a Beneficiary
-          </a>
+          </Link>
         </p>
       </div>
     </div>

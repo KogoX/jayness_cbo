@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosClient';
 import type { Program } from '../../types/program.types';
 import type { CboEvent } from '../../types/event.types';
+import { AUTH_CHANGED_EVENT, notifyAuthChanged } from '../../utils/authEvents';
 
 interface User {
   name: string;
@@ -25,10 +26,11 @@ const PublicNavbar: React.FC = () => {
   const [allPrograms, setAllPrograms] = useState<Program[]>([]);
   const [allEvents, setAllEvents] = useState<CboEvent[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [hasLoadedSearchData, setHasLoadedSearchData] = useState(false);
   
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Check if user is logged in and listen for changes
+  // Check if user is logged in and listen for auth updates.
   useEffect(() => {
     const checkUser = () => {
       const storedUser = localStorage.getItem('user');
@@ -47,21 +49,21 @@ const PublicNavbar: React.FC = () => {
 
     checkUser();
     
-    // Listen for storage changes (e.g., logout in another tab)
+    // Listen for storage changes (e.g., logout in another tab).
     window.addEventListener('storage', checkUser);
-    
-    // Also check on location change (in case user logs in/out on same tab)
-    const interval = setInterval(checkUser, 1000);
+    window.addEventListener(AUTH_CHANGED_EVENT, checkUser);
     
     return () => {
       window.removeEventListener('storage', checkUser);
-      clearInterval(interval);
+      window.removeEventListener(AUTH_CHANGED_EVENT, checkUser);
     };
-  }, [location]);
+  }, []);
 
-  // Load search data on mount or when search is focused (preload for better UX)
+  // Load search data only when user starts searching.
   useEffect(() => {
-    if (allPrograms.length === 0 && allEvents.length === 0) {
+    const shouldLoadSearchData = (showResults || searchQuery.length >= 2) && !hasLoadedSearchData;
+
+    if (shouldLoadSearchData) {
       setSearchLoading(true);
       let isMounted = true;
       
@@ -75,6 +77,7 @@ const PublicNavbar: React.FC = () => {
           if (isMounted) {
             setAllPrograms(progRes.data);
             setAllEvents(eventRes.data);
+            setHasLoadedSearchData(true);
           }
         } catch (error) {
           console.error("Search data load failed", error);
@@ -91,7 +94,7 @@ const PublicNavbar: React.FC = () => {
         isMounted = false;
       };
     }
-  }, [allPrograms.length, allEvents.length]);
+  }, [showResults, searchQuery, hasLoadedSearchData]);
 
   // Close search on outside click
   useEffect(() => {
@@ -183,6 +186,7 @@ const PublicNavbar: React.FC = () => {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    notifyAuthChanged();
     setUser(null);
     navigate('/');
     setIsOpen(false);

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import SeoManager from './components/seo/SeoManager';
 
 // Layouts & Security (Load immediately - needed for routing)
 import PublicLayout from './components/layout/PublicLayout';
@@ -45,6 +46,7 @@ const PageLoader = () => (
 function App() {
   return (
     <Router>
+      <SeoManager />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           

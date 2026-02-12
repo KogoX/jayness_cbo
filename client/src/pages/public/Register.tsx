@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../../api/axiosClient';
 
 const Register: React.FC = () => {
@@ -107,9 +108,9 @@ const Register: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <a href="/login" className="text-primary hover:underline font-medium">
+          <Link to="/login" className="text-primary hover:underline font-medium">
             Log in here
-          </a>
+          </Link>
         </p>
       </div>
     </div>
