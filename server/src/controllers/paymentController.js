@@ -85,6 +85,38 @@ const queryStkStatusFromMpesa = async (checkoutRequestID) => {
   return response.data;
 };
 
+const normalizeItemName = (name = '') =>
+  String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const getCallbackItemValue = (items, expectedName) => {
+  const expected = normalizeItemName(expectedName);
+  const found = (items || []).find((item) => normalizeItemName(item?.Name) === expected);
+  return found?.Value;
+};
+
+const extractMpesaReceiptCode = (callbackData) => {
+  const items = callbackData?.CallbackMetadata?.Item || [];
+
+  const fromKnownKey =
+    getCallbackItemValue(items, 'MpesaReceiptNumber') ||
+    getCallbackItemValue(items, 'M-PesaReceiptNumber') ||
+    getCallbackItemValue(items, 'ReceiptNumber');
+
+  if (fromKnownKey) return String(fromKnownKey);
+
+  // Fallback: scan all string metadata values for typical M-Pesa receipt format (e.g., QGH7X8Y9Z1).
+  for (const item of items) {
+    if (typeof item?.Value === 'string') {
+      const trimmed = item.Value.trim();
+      if (/^[A-Z0-9]{8,15}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+  }
+
+  return undefined;
+};
+
 const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
   if (payment.status !== 'Pending') {
     return payment;
@@ -210,15 +242,15 @@ const mpesaCallback = async (req, res) => {
     if (String(callbackData.ResultCode) === '0') {
       console.log("✅ Payment Successful!");
       
-      const items = callbackData?.CallbackMetadata?.Item || [];
-      // Use optional chaining or find safely just in case metadata is weird
-      const receiptItem = items.find(item => item.Name === 'MpesaReceiptNumber');
-      const receipt = receiptItem ? receiptItem.Value : undefined;
+      const receipt = extractMpesaReceiptCode(callbackData);
 
       const payment = await Payment.findOne({ checkoutRequestID });
       
       if (payment) {
         await markPaymentCompleted(payment, receipt);
+        if (!receipt) {
+          console.warn(`⚠️ Payment marked completed but receipt code missing for ${checkoutRequestID}. Awaiting later metadata sync.`);
+        }
       }
     } else {
       console.log("❌ Payment Failed/Cancelled (Code " + callbackData.ResultCode + ")");
@@ -253,6 +285,7 @@ const checkPaymentStatus = async (req, res) => {
     res.status(200).json({
       status: latest.status,
       receipt: latest.mpesaReceiptNumber,
+      receiptPending: latest.status === 'Completed' && !latest.mpesaReceiptNumber,
     });
 
   } catch (error) {
