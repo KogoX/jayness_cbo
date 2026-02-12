@@ -27,11 +27,14 @@ const getMpesaAccessTokenValue = async () => {
   return response.data.access_token;
 };
 
-const markPaymentCompleted = async (payment, receipt = 'N/A') => {
+const markPaymentCompleted = async (payment, receipt) => {
   const wasCompleted = payment.status === 'Completed';
 
   payment.status = 'Completed';
-  payment.mpesaReceiptNumber = receipt;
+  // Persist only a real M-Pesa receipt code.
+  if (receipt && receipt !== 'N/A') {
+    payment.mpesaReceiptNumber = receipt;
+  }
   payment.transactionDate = new Date();
   await payment.save();
 
@@ -92,10 +95,7 @@ const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
     const mappedStatus = mapMpesaResultCodeToStatus(mpesaStatus.ResultCode);
 
     if (mappedStatus === 'Completed') {
-      await markPaymentCompleted(
-        payment,
-        mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber || 'N/A'
-      );
+      await markPaymentCompleted(payment, mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber);
     } else if (mappedStatus === 'Failed' || mappedStatus === 'Cancelled') {
       payment.status = mappedStatus;
       await payment.save();
@@ -213,7 +213,7 @@ const mpesaCallback = async (req, res) => {
       const items = callbackData?.CallbackMetadata?.Item || [];
       // Use optional chaining or find safely just in case metadata is weird
       const receiptItem = items.find(item => item.Name === 'MpesaReceiptNumber');
-      const receipt = receiptItem ? receiptItem.Value : 'N/A';
+      const receipt = receiptItem ? receiptItem.Value : undefined;
 
       const payment = await Payment.findOne({ checkoutRequestID });
       
@@ -279,6 +279,10 @@ const getPaymentReceipt = async (req, res) => {
 
     if (!latest || latest.status !== 'Completed') {
       return res.status(400).json({ message: 'Receipt available only after payment confirmation' });
+    }
+
+    if (!latest.mpesaReceiptNumber || latest.mpesaReceiptNumber === 'N/A') {
+      return res.status(409).json({ message: 'M-Pesa receipt code not recorded yet. Please try again shortly.' });
     }
 
     res.status(200).json({
