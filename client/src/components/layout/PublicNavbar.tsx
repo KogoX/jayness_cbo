@@ -487,7 +487,7 @@ const PublicNavbar: React.FC = () => {
                         }} 
                         className="p-3 border-b border-gray-50 text-sm text-gray-700 active:bg-purple-50 flex items-start gap-3"
                       >
-                        <span className="text-lg shrink-0">📂</span>
+                        <span className="text-primary shrink-0 mt-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg></span>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-800">{highlightMatch(p.title, searchQuery)}</div>
                           {p.description && (
@@ -511,7 +511,7 @@ const PublicNavbar: React.FC = () => {
                         }} 
                         className="p-3 border-b border-gray-50 text-sm text-gray-700 active:bg-purple-50 flex items-start gap-3"
                       >
-                        <span className="text-lg shrink-0">📅</span>
+                        <span className="text-primary shrink-0 mt-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" /></svg></span>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-800">{highlightMatch(e.title, searchQuery)}</div>
                           <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
@@ -574,3 +574,4 @@ const PublicNavbar: React.FC = () => {
 };
 
 export default memo(PublicNavbar);
+
