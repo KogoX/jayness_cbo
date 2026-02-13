@@ -2,6 +2,9 @@ const User = require('../models/User');
 const Payment = require('../models/Payment');
 const Program = require('../models/Program');
 const AuditLog = require('../models/AuditLog');
+const PaymentIntent = require('../models/PaymentIntent');
+const Beneficiary = require('../models/Beneficiary');
+const ContactMessage = require('../models/ContactMessage');
 const { logAudit } = require('../utils/auditLogger');
 
 const toCsv = (rows) => {
@@ -196,10 +199,93 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
+const getReviewQueue = async (req, res) => {
+  try {
+    const now = Date.now();
+    const toHours = (date) => Math.floor((now - new Date(date).getTime()) / (1000 * 60 * 60));
+
+    const [paymentItems, pendingBeneficiaries, contactMessages] = await Promise.all([
+      PaymentIntent.find({ reconciliationStatus: { $in: ['Mismatch', 'NeedsReview'] } })
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .select('intentId reconciliationStatus mismatchReason createdAt updatedAt amount phoneNumber'),
+      Beneficiary.find({ status: 'Pending' })
+        .sort({ createdAt: 1 })
+        .limit(20)
+        .select('fullName phone assignedProgram createdAt'),
+      ContactMessage.find({ status: 'New' })
+        .sort({ createdAt: 1 })
+        .limit(20)
+        .select('name email subject createdAt'),
+    ]);
+
+    const paymentQueue = paymentItems.map((item) => {
+      const ageHours = toHours(item.createdAt || item.updatedAt);
+      const slaHours = 24;
+      return {
+        type: 'payment_reconciliation',
+        id: item.intentId,
+        title: `Intent ${item.intentId}`,
+        detail: item.mismatchReason || item.reconciliationStatus,
+        ageHours,
+        slaHours,
+        breached: ageHours > slaHours,
+      };
+    });
+
+    const beneficiaryQueue = pendingBeneficiaries.map((item) => {
+      const ageHours = toHours(item.createdAt);
+      const slaHours = 48;
+      return {
+        type: 'beneficiary_approval',
+        id: item._id,
+        title: item.fullName,
+        detail: item.phone || 'No phone provided',
+        ageHours,
+        slaHours,
+        breached: ageHours > slaHours,
+      };
+    });
+
+    const contactQueue = contactMessages.map((item) => {
+      const ageHours = toHours(item.createdAt);
+      const slaHours = 24;
+      return {
+        type: 'contact_followup',
+        id: item._id,
+        title: item.subject || 'General inquiry',
+        detail: item.email,
+        ageHours,
+        slaHours,
+        breached: ageHours > slaHours,
+      };
+    });
+
+    const items = [...paymentQueue, ...beneficiaryQueue, ...contactQueue]
+      .sort((a, b) => b.ageHours - a.ageHours)
+      .slice(0, 30);
+
+    const summary = {
+      total: items.length,
+      breached: items.filter((item) => item.breached).length,
+      byType: {
+        payment_reconciliation: paymentQueue.length,
+        beneficiary_approval: beneficiaryQueue.length,
+        contact_followup: contactQueue.length,
+      },
+    };
+
+    res.json({ summary, items });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAdminStats,
   getUsers,
   deleteUser,
   updateUserRole,
   getAuditLogs,
+  getReviewQueue,
 };

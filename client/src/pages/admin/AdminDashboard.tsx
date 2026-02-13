@@ -9,6 +9,26 @@ interface AdminStats {
   activePrograms: number;
 }
 
+interface ReviewQueueSummary {
+  total: number;
+  breached: number;
+  byType: {
+    payment_reconciliation: number;
+    beneficiary_approval: number;
+    contact_followup: number;
+  };
+}
+
+interface ReviewQueueItem {
+  type: string;
+  id: string;
+  title: string;
+  detail: string;
+  ageHours: number;
+  slaHours: number;
+  breached: boolean;
+}
+
 interface BarPoint {
   label: string;
   value: number;
@@ -87,14 +107,21 @@ const RatioDonut: React.FC<{ users: number; programs: number }> = ({ users, prog
 
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [reviewSummary, setReviewSummary] = useState<ReviewQueueSummary | null>(null);
+  const [reviewItems, setReviewItems] = useState<ReviewQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data } = await apiClient.get<AdminStats>('/admin/stats');
-        setStats(data);
+        const [statsRes, queueRes] = await Promise.all([
+          apiClient.get<AdminStats>('/admin/stats'),
+          apiClient.get<{ summary: ReviewQueueSummary; items: ReviewQueueItem[] }>('/admin/review-queue'),
+        ]);
+        setStats(statsRes.data);
+        setReviewSummary(queueRes.data.summary);
+        setReviewItems(queueRes.data.items);
       } catch (error) {
         console.error('Admin stats failed', error);
       } finally {
@@ -137,6 +164,45 @@ const AdminDashboard: React.FC = () => {
           <p className="text-xs uppercase tracking-wide text-gray-500">Active Programs</p>
           <p className="mt-2 text-3xl font-semibold text-gray-900">{stats?.activePrograms ?? 0}</p>
         </div>
+        <div className="rounded-xl bg-white border border-gray-100 p-5 shadow-sm md:col-span-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Review Queue</p>
+              <p className="mt-1 text-2xl font-semibold text-gray-900">{reviewSummary?.total ?? 0} open items</p>
+            </div>
+            <span
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                (reviewSummary?.breached ?? 0) > 0
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-emerald-100 text-emerald-700'
+              }`}
+            >
+              {(reviewSummary?.breached ?? 0) > 0
+                ? `${reviewSummary?.breached ?? 0} SLA breached`
+                : 'No SLA breach'}
+            </span>
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-gray-500">Reconciliation</p>
+              <p className="font-semibold text-gray-900">
+                {reviewSummary?.byType.payment_reconciliation ?? 0}
+              </p>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-gray-500">Beneficiary Approvals</p>
+              <p className="font-semibold text-gray-900">
+                {reviewSummary?.byType.beneficiary_approval ?? 0}
+              </p>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-gray-500">Contact Follow-ups</p>
+              <p className="font-semibold text-gray-900">
+                {reviewSummary?.byType.contact_followup ?? 0}
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -168,6 +234,40 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-xl bg-white border border-gray-100 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900">Priority review queue</h3>
+          <button
+            onClick={() => navigate('/admin/notifications')}
+            className="text-sm font-medium text-blue-700 hover:text-blue-900"
+          >
+            Notify team
+          </button>
+        </div>
+        <div className="space-y-3 mb-6">
+          {reviewItems.slice(0, 6).map((item) => (
+            <div
+              key={`${item.type}-${item.id}`}
+              className={`rounded-lg border p-3 ${
+                item.breached ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium text-gray-900">{item.title}</p>
+                <span className="text-xs text-gray-600">
+                  {item.ageHours}h / SLA {item.slaHours}h
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
+            </div>
+          ))}
+          {reviewItems.length === 0 && (
+            <p className="text-sm text-gray-500">No pending review items right now.</p>
+          )}
+        </div>
+
       </section>
 
       <section className="rounded-xl bg-white border border-gray-100 p-6 shadow-sm">
