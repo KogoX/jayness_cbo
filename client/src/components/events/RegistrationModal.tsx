@@ -25,7 +25,7 @@ const RegistrationModal: React.FC<Props> = ({ isOpen, onClose, eventId, eventTit
 
     try {
       await apiClient.post(`/events/${eventId}/register`, formData);
-      setMessage('✅ Successfully Registered! See you there.');
+      setMessage('Successfully Registered! See you there.');
       setFormData({ fullName: '', phone: '', email: '' });
       setTimeout(() => {
         onClose();
@@ -43,9 +43,13 @@ const RegistrationModal: React.FC<Props> = ({ isOpen, onClose, eventId, eventTit
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border-t-4 border-primary">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-gray-800">Register for Event</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-red-500">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-red-500" aria-label="Close modal">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        
+
         <p className="text-sm text-gray-600 mb-4">
           You are registering for: <span className="font-bold text-primary">{eventTitle}</span>
         </p>
@@ -53,34 +57,36 @@ const RegistrationModal: React.FC<Props> = ({ isOpen, onClose, eventId, eventTit
         {message && <div className="bg-green-50 text-green-700 p-3 rounded mb-4 text-sm">{message}</div>}
         {error && <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
 
-        {loading ? <LoadingSpinner /> : (
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-bold text-gray-700">Full Name</label>
-              <input 
+              <input
                 className="w-full border p-2 rounded focus:ring-2 focus:ring-primary focus:outline-none"
                 value={formData.fullName}
-                onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700">Phone Number</label>
-              <input 
+              <input
                 type="tel"
                 className="w-full border p-2 rounded focus:ring-2 focus:ring-primary focus:outline-none"
                 value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700">Email (Optional)</label>
-              <input 
+              <input
                 type="email"
                 className="w-full border p-2 rounded focus:ring-2 focus:ring-primary focus:outline-none"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <button type="submit" className="w-full bg-primary text-white py-2 rounded hover:bg-purple-700 font-bold transition">

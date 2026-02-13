@@ -61,7 +61,13 @@ const JoinProgram: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center border-t-4 border-green-500">
-          <div className="text-6xl mb-4">✅</div>
+          <div className="mb-4 flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+              <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Received!</h2>
           <p className="text-gray-600 mb-6">
             Thank you for registering. We will contact you at <strong>{formData.phone}</strong> regarding your application status.

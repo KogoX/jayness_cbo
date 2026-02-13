@@ -211,7 +211,17 @@ const AdminEvents: React.FC = () => {
                       to={`/admin/events/${event._id}/registrations`}
                       className="text-blue-600 hover:text-blue-900 transition flex items-center gap-1"
                     >
-                      <span>👥</span> View
+                      <span className="inline-flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 20h5v-1a4 4 0 00-5-3.87M17 20H7m10 0v-1c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v1m0 0H2v-1a4 4 0 015-3.87M7 20v-1m10-8a3 3 0 11-6 0 3 3 0 016 0zm-10 0a3 3 0 116 0 3 3 0 01-6 0z"
+                          />
+                        </svg>
+                        View
+                      </span>
                     </Link>
 
                     <button 
