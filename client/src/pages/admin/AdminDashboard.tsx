@@ -29,6 +29,26 @@ interface ReviewQueueItem {
   breached: boolean;
 }
 
+interface ComplianceReport {
+  month: string;
+  payments: {
+    completedCount: number;
+    totalAmount: number;
+    receiptsRecorded: number;
+  };
+  reconciliation: {
+    NotChecked: number;
+    Matched: number;
+    Mismatch: number;
+    NeedsReview: number;
+  };
+  remindersSent: number;
+  auditEvents: number;
+  slaRiskItems: number;
+  automationCoveragePercent: number;
+  recordCompletenessPercent: number;
+}
+
 interface BarPoint {
   label: string;
   value: number;
@@ -36,6 +56,10 @@ interface BarPoint {
 }
 
 const KPI_COLORS = ['#2563eb', '#10b981', '#f59e0b'];
+const currentMonthKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}`;
+};
 
 const ComparisonBars: React.FC<{ data: BarPoint[] }> = ({ data }) => {
   const maxValue = Math.max(...data.map((point) => point.value), 1);
@@ -109,19 +133,22 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reviewSummary, setReviewSummary] = useState<ReviewQueueSummary | null>(null);
   const [reviewItems, setReviewItems] = useState<ReviewQueueItem[]>([]);
+  const [compliance, setCompliance] = useState<ComplianceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [statsRes, queueRes] = await Promise.all([
+        const [statsRes, queueRes, complianceRes] = await Promise.all([
           apiClient.get<AdminStats>('/admin/stats'),
           apiClient.get<{ summary: ReviewQueueSummary; items: ReviewQueueItem[] }>('/admin/review-queue'),
+          apiClient.get<ComplianceReport>(`/admin/compliance/monthly?month=${currentMonthKey()}`),
         ]);
         setStats(statsRes.data);
         setReviewSummary(queueRes.data.summary);
         setReviewItems(queueRes.data.items);
+        setCompliance(complianceRes.data);
       } catch (error) {
         console.error('Admin stats failed', error);
       } finally {
@@ -138,6 +165,25 @@ const AdminDashboard: React.FC = () => {
     { label: 'Programs', value: stats?.activePrograms ?? 0, color: KPI_COLORS[1] },
     { label: 'Funds (x1,000)', value: Math.round((stats?.totalFunds ?? 0) / 1000), color: KPI_COLORS[2] }
   ];
+
+  const downloadComplianceCsv = async () => {
+    try {
+      const response = await apiClient.get(`/admin/compliance/monthly?month=${currentMonthKey()}&format=csv`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `compliance-${currentMonthKey()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Compliance export failed', error);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -268,6 +314,40 @@ const AdminDashboard: React.FC = () => {
           )}
         </div>
 
+      </section>
+
+      <section className="rounded-xl bg-white border border-gray-100 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900">Monthly compliance</h3>
+          <button
+            onClick={downloadComplianceCsv}
+            className="text-sm font-medium text-blue-700 hover:text-blue-900"
+          >
+            Export CSV
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="rounded-lg bg-gray-50 p-3">
+            <p className="text-gray-500 text-sm">Automation Coverage</p>
+            <p className="font-semibold text-gray-900">
+              {compliance?.automationCoveragePercent ?? 0}%
+            </p>
+          </div>
+          <div className="rounded-lg bg-gray-50 p-3">
+            <p className="text-gray-500 text-sm">Record Completeness</p>
+            <p className="font-semibold text-gray-900">
+              {compliance?.recordCompletenessPercent ?? 0}%
+            </p>
+          </div>
+          <div className="rounded-lg bg-gray-50 p-3">
+            <p className="text-gray-500 text-sm">Reminders Sent</p>
+            <p className="font-semibold text-gray-900">{compliance?.remindersSent ?? 0}</p>
+          </div>
+          <div className="rounded-lg bg-gray-50 p-3">
+            <p className="text-gray-500 text-sm">Audit Events</p>
+            <p className="font-semibold text-gray-900">{compliance?.auditEvents ?? 0}</p>
+          </div>
+        </div>
       </section>
 
       <section className="rounded-xl bg-white border border-gray-100 p-6 shadow-sm">

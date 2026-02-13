@@ -5,6 +5,7 @@ const AuditLog = require('../models/AuditLog');
 const PaymentIntent = require('../models/PaymentIntent');
 const Beneficiary = require('../models/Beneficiary');
 const ContactMessage = require('../models/ContactMessage');
+const Notification = require('../models/Notification');
 const { logAudit } = require('../utils/auditLogger');
 
 const toCsv = (rows) => {
@@ -281,6 +282,105 @@ const getReviewQueue = async (req, res) => {
   }
 };
 
+const monthRangeFromKey = (monthKey) => {
+  const now = new Date();
+  const [yearStr, monthStr] = (monthKey || '').split('-');
+  const year = Number(yearStr) || now.getFullYear();
+  const monthIndex = (Number(monthStr) || now.getMonth() + 1) - 1;
+
+  const start = new Date(year, monthIndex, 1);
+  const end = new Date(year, monthIndex + 1, 1);
+  const normalizedKey = `${start.getFullYear()}-${`${start.getMonth() + 1}`.padStart(2, '0')}`;
+  return { start, end, monthKey: normalizedKey };
+};
+
+const getMonthlyComplianceReport = async (req, res) => {
+  try {
+    const { month, format = 'json' } = req.query;
+    const { start, end, monthKey } = monthRangeFromKey(month);
+
+    const [
+      completedPayments,
+      intents,
+      reminderCount,
+      auditCount,
+      pendingBeneficiaries,
+      openContacts,
+    ] = await Promise.all([
+      Payment.find({ status: 'Completed', createdAt: { $gte: start, $lt: end } }).select('amount mpesaReceiptNumber'),
+      PaymentIntent.find({ createdAt: { $gte: start, $lt: end } }).select('reconciliationStatus'),
+      Notification.countDocuments({
+        createdAt: { $gte: start, $lt: end },
+        'metadata.category': 'reminder',
+      }),
+      AuditLog.countDocuments({ createdAt: { $gte: start, $lt: end } }),
+      Beneficiary.countDocuments({ status: 'Pending', createdAt: { $gte: start, $lt: end } }),
+      ContactMessage.countDocuments({ status: 'New', createdAt: { $gte: start, $lt: end } }),
+    ]);
+
+    const paymentTotal = completedPayments.reduce((sum, item) => sum + item.amount, 0);
+    const receiptsRecorded = completedPayments.filter(
+      (item) => item.mpesaReceiptNumber && item.mpesaReceiptNumber !== 'N/A'
+    ).length;
+
+    const intentsByStatus = intents.reduce(
+      (acc, item) => {
+        acc[item.reconciliationStatus] = (acc[item.reconciliationStatus] || 0) + 1;
+        return acc;
+      },
+      { NotChecked: 0, Matched: 0, Mismatch: 0, NeedsReview: 0 }
+    );
+
+    const totalIntents = intents.length || 1;
+    const automationCoverage = Math.round(((intentsByStatus.Matched || 0) / totalIntents) * 100);
+    const recordCompleteness = completedPayments.length
+      ? Math.round((receiptsRecorded / completedPayments.length) * 100)
+      : 100;
+
+    const report = {
+      month: monthKey,
+      payments: {
+        completedCount: completedPayments.length,
+        totalAmount: paymentTotal,
+        receiptsRecorded,
+      },
+      reconciliation: intentsByStatus,
+      remindersSent: reminderCount,
+      auditEvents: auditCount,
+      slaRiskItems: pendingBeneficiaries + openContacts + intentsByStatus.NeedsReview + intentsByStatus.Mismatch,
+      automationCoveragePercent: automationCoverage,
+      recordCompletenessPercent: recordCompleteness,
+    };
+
+    if (format === 'csv') {
+      const lines = [
+        'metric,value',
+        `month,${report.month}`,
+        `payments_completed,${report.payments.completedCount}`,
+        `payments_total_amount,${report.payments.totalAmount}`,
+        `receipts_recorded,${report.payments.receiptsRecorded}`,
+        `reconciliation_matched,${report.reconciliation.Matched}`,
+        `reconciliation_mismatch,${report.reconciliation.Mismatch}`,
+        `reconciliation_needs_review,${report.reconciliation.NeedsReview}`,
+        `reconciliation_not_checked,${report.reconciliation.NotChecked}`,
+        `reminders_sent,${report.remindersSent}`,
+        `audit_events,${report.auditEvents}`,
+        `sla_risk_items,${report.slaRiskItems}`,
+        `automation_coverage_percent,${report.automationCoveragePercent}`,
+        `record_completeness_percent,${report.recordCompletenessPercent}`,
+      ];
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="compliance-${report.month}.csv"`);
+      return res.status(200).send(lines.join('\n'));
+    }
+
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAdminStats,
   getUsers,
@@ -288,4 +388,5 @@ module.exports = {
   updateUserRole,
   getAuditLogs,
   getReviewQueue,
+  getMonthlyComplianceReport,
 };
