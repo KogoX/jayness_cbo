@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db'); 
 const path = require('path');
 const requestContext = require('./middleware/requestContext');
+const { startReminderJobs } = require('./services/reminderService');
 
 // Load env vars
 dotenv.config();
@@ -51,6 +52,7 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+startReminderJobs();
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

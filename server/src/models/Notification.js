@@ -22,7 +22,18 @@ const notificationSchema = new mongoose.Schema({
     type: String, 
     enum: ['info', 'alert', 'success'],
     default: 'info'
-  }
+  },
+  dedupeKey: {
+    type: String,
+    default: undefined,
+    unique: true,
+    sparse: true,
+    index: true,
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Notification', notificationSchema);
