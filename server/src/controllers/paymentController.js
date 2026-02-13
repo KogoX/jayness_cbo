@@ -1,62 +1,79 @@
 const axios = require('axios');
+const crypto = require('crypto');
 const Payment = require('../models/Payment');
-const Program = require('../models/Program'); 
+const PaymentIntent = require('../models/PaymentIntent');
+const Program = require('../models/Program');
+const { logAudit } = require('../utils/auditLogger');
 
 const getTimestamp = () => {
   const date = new Date();
   return (
     date.getFullYear() +
-    ('0' + (date.getMonth() + 1)).slice(-2) +
-    ('0' + date.getDate()).slice(-2) +
-    ('0' + date.getHours()).slice(-2) +
-    ('0' + date.getMinutes()).slice(-2) +
-    ('0' + date.getSeconds()).slice(-2)
+    (`0${date.getMonth() + 1}`).slice(-2) +
+    (`0${date.getDate()}`).slice(-2) +
+    (`0${date.getHours()}`).slice(-2) +
+    (`0${date.getMinutes()}`).slice(-2) +
+    (`0${date.getSeconds()}`).slice(-2)
   );
+};
+
+const generateIntentId = () => {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+};
+
+const normalizePhone = (value = '') => String(value).replace(/\D/g, '').slice(-9);
+
+const mapMpesaResultCodeToStatus = (resultCode) => {
+  const code = String(resultCode);
+  if (code === '0') return 'Completed';
+  if (code === '1032') return 'Cancelled';
+  if (code === '1' || code === '2001') return 'Failed';
+  return 'Pending';
+};
+
+const normalizeItemName = (name = '') => String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const getCallbackItemValue = (items, expectedName) => {
+  const expected = normalizeItemName(expectedName);
+  const found = (items || []).find((item) => normalizeItemName(item?.Name) === expected);
+  return found?.Value;
+};
+
+const extractMpesaReceiptCode = (callbackData) => {
+  const items = callbackData?.CallbackMetadata?.Item || [];
+  const fromKnownKey =
+    getCallbackItemValue(items, 'MpesaReceiptNumber') ||
+    getCallbackItemValue(items, 'M-PesaReceiptNumber') ||
+    getCallbackItemValue(items, 'ReceiptNumber');
+
+  if (fromKnownKey) return String(fromKnownKey);
+
+  for (const item of items) {
+    if (typeof item?.Value === 'string') {
+      const trimmed = item.Value.trim();
+      if (/^[A-Z0-9]{8,15}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+  }
+
+  return undefined;
 };
 
 const getMpesaAccessTokenValue = async () => {
   const consumer_key = process.env.MPESA_CONSUMER_KEY.trim();
   const consumer_secret = process.env.MPESA_CONSUMER_SECRET.trim();
   const url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-  const auth = 'Basic ' + Buffer.from(consumer_key + ':' + consumer_secret).toString('base64');
+  const auth = `Basic ${Buffer.from(`${consumer_key}:${consumer_secret}`).toString('base64')}`;
 
   const response = await axios.get(url, {
     headers: { Authorization: auth },
   });
 
   return response.data.access_token;
-};
-
-const markPaymentCompleted = async (payment, receipt) => {
-  const wasCompleted = payment.status === 'Completed';
-
-  payment.status = 'Completed';
-  // Persist only a real M-Pesa receipt code.
-  if (receipt && receipt !== 'N/A') {
-    payment.mpesaReceiptNumber = receipt;
-  }
-  payment.transactionDate = new Date();
-  await payment.save();
-
-  // Prevent double-adding raised amount when callback/status-query race each other.
-  if (!wasCompleted && payment.programId) {
-    const program = await Program.findById(payment.programId);
-    if (program) {
-      program.currentRaised = (program.currentRaised || 0) + payment.amount;
-      await program.save();
-      console.log(`🚀 Updated Program Budget: ${program.title} is now Ksh ${program.currentRaised}`);
-    }
-  }
-};
-
-const mapMpesaResultCodeToStatus = (resultCode) => {
-  const code = String(resultCode);
-
-  if (code === '0') return 'Completed';
-  if (code === '1032') return 'Cancelled';
-  if (code === '1' || code === '2001') return 'Failed';
-
-  return 'Pending';
 };
 
 const queryStkStatusFromMpesa = async (checkoutRequestID) => {
@@ -76,7 +93,7 @@ const queryStkStatusFromMpesa = async (checkoutRequestID) => {
     },
     {
       headers: {
-        Authorization: 'Bearer ' + token,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     }
@@ -85,36 +102,108 @@ const queryStkStatusFromMpesa = async (checkoutRequestID) => {
   return response.data;
 };
 
-const normalizeItemName = (name = '') =>
-  String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+const getIntentForPayment = async (payment) => {
+  if (payment.paymentIntent) {
+    return PaymentIntent.findById(payment.paymentIntent);
+  }
 
-const getCallbackItemValue = (items, expectedName) => {
-  const expected = normalizeItemName(expectedName);
-  const found = (items || []).find((item) => normalizeItemName(item?.Name) === expected);
-  return found?.Value;
+  if (payment.intentId) {
+    return PaymentIntent.findOne({ intentId: payment.intentId });
+  }
+
+  return null;
 };
 
-const extractMpesaReceiptCode = (callbackData) => {
-  const items = callbackData?.CallbackMetadata?.Item || [];
+const reconcilePaymentAndIntent = async (payment, intent, req = null, context = {}) => {
+  if (!payment) return;
 
-  const fromKnownKey =
-    getCallbackItemValue(items, 'MpesaReceiptNumber') ||
-    getCallbackItemValue(items, 'M-PesaReceiptNumber') ||
-    getCallbackItemValue(items, 'ReceiptNumber');
+  if (!intent) {
+    payment.reconciliationStatus = 'NeedsReview';
+    payment.mismatchReason = 'Missing payment intent';
+    await payment.save();
+    await logAudit({
+      req,
+      action: 'payment.reconciliation.flagged',
+      entityType: 'Payment',
+      entityId: payment._id,
+      metadata: { checkoutRequestID: payment.checkoutRequestID, reason: payment.mismatchReason, ...context },
+      source: context.source || 'api',
+    });
+    return;
+  }
 
-  if (fromKnownKey) return String(fromKnownKey);
+  const reasons = [];
+  if (Number(payment.amount) !== Number(intent.amount)) {
+    reasons.push('Amount mismatch');
+  }
+  if (normalizePhone(payment.phoneNumber) !== normalizePhone(intent.phoneNumber)) {
+    reasons.push('Phone mismatch');
+  }
 
-  // Fallback: scan all string metadata values for typical M-Pesa receipt format (e.g., QGH7X8Y9Z1).
-  for (const item of items) {
-    if (typeof item?.Value === 'string') {
-      const trimmed = item.Value.trim();
-      if (/^[A-Z0-9]{8,15}$/i.test(trimmed)) {
-        return trimmed;
-      }
+  const status = reasons.length ? 'Mismatch' : 'Matched';
+  const reason = reasons.length ? reasons.join('; ') : null;
+
+  payment.reconciliationStatus = status;
+  payment.mismatchReason = reason;
+  await payment.save();
+
+  intent.reconciliationStatus = status;
+  intent.mismatchReason = reason;
+  intent.lastCheckedAt = new Date();
+  await intent.save();
+
+  if (status !== 'Matched') {
+    await logAudit({
+      req,
+      action: 'payment.reconciliation.flagged',
+      entityType: 'PaymentIntent',
+      entityId: intent._id,
+      metadata: {
+        intentId: intent.intentId,
+        checkoutRequestID: payment.checkoutRequestID,
+        reason,
+        ...context,
+      },
+      source: context.source || 'api',
+    });
+  }
+};
+
+const syncIntentFromPayment = async (payment, req = null, context = {}) => {
+  const intent = await getIntentForPayment(payment);
+  if (!intent) {
+    await reconcilePaymentAndIntent(payment, null, req, context);
+    return;
+  }
+
+  intent.checkoutRequestID = payment.checkoutRequestID || intent.checkoutRequestID;
+  intent.status = payment.status;
+  intent.mpesaReceiptNumber = payment.mpesaReceiptNumber || intent.mpesaReceiptNumber;
+  intent.lastCheckedAt = new Date();
+  await intent.save();
+
+  await reconcilePaymentAndIntent(payment, intent, req, context);
+};
+
+const markPaymentCompleted = async (payment, receipt, req = null, context = {}) => {
+  const wasCompleted = payment.status === 'Completed';
+
+  payment.status = 'Completed';
+  if (receipt && receipt !== 'N/A') {
+    payment.mpesaReceiptNumber = receipt;
+  }
+  payment.transactionDate = new Date();
+  await payment.save();
+
+  if (!wasCompleted && payment.programId) {
+    const program = await Program.findById(payment.programId);
+    if (program) {
+      program.currentRaised = (program.currentRaised || 0) + payment.amount;
+      await program.save();
     }
   }
 
-  return undefined;
+  await syncIntentFromPayment(payment, req, context);
 };
 
 const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
@@ -127,63 +216,60 @@ const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
     const mappedStatus = mapMpesaResultCodeToStatus(mpesaStatus.ResultCode);
 
     if (mappedStatus === 'Completed') {
-      await markPaymentCompleted(payment, mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber);
+      await markPaymentCompleted(payment, mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber, null, {
+        source: 'system_job',
+        trigger: 'status_query',
+      });
     } else if (mappedStatus === 'Failed' || mappedStatus === 'Cancelled') {
       payment.status = mappedStatus;
       await payment.save();
+      await syncIntentFromPayment(payment, null, { source: 'system_job', trigger: 'status_query' });
     }
   } catch (queryError) {
-    // Callback may still arrive; keep Pending if query fails/transient.
     console.error('STK Query Error:', queryError.response ? queryError.response.data : queryError.message);
   }
 
   return payment;
 };
 
-// 1. Middleware to generate M-Pesa Access Token
 const getAccessToken = async (req, res, next) => {
   const consumer_key = process.env.MPESA_CONSUMER_KEY.trim();
   const consumer_secret = process.env.MPESA_CONSUMER_SECRET.trim();
-  
   const url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-  const auth = 'Basic ' + Buffer.from(consumer_key + ':' + consumer_secret).toString('base64');
+  const auth = `Basic ${Buffer.from(`${consumer_key}:${consumer_secret}`).toString('base64')}`;
 
   try {
     const response = await axios.get(url, {
       headers: { Authorization: auth },
     });
-    
-    console.log("------------------------------------------------");
-    console.log("🔑 GENERATED TOKEN:", response.data.access_token.substring(0, 10) + "...");
-    console.log("------------------------------------------------");
-
     req.token = response.data.access_token;
     next();
   } catch (error) {
-    console.error("❌ TOKEN GENERATION FAILED:", error.response ? error.response.data : error.message);
-    res.status(400).json({ message: "Could not generate M-Pesa token" });
+    res.status(400).json({ message: 'Could not generate M-Pesa token' });
   }
 };
 
-// 2. Initiate STK Push
 const initiateSTKPush = async (req, res) => {
-  // Capture programId from the frontend request
-  const { phoneNumber, amount, programId } = req.body; 
+  const { phoneNumber, amount, programId } = req.body;
   const token = req.token;
-
   const timestamp = getTimestamp();
-
   const shortCode = process.env.MPESA_SHORTCODE.trim();
   const passkey = process.env.MPESA_PASSKEY.trim();
   const password = Buffer.from(shortCode + passkey + timestamp).toString('base64');
-
   const url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
-
-  // Ensure Callback URL is your LIVE Render URL
-  // Example: https://jayness-cbo.onrender.com/api/payments/callback
-  const callbackURL = process.env.MPESA_CALLBACK_URL 
-    ? process.env.MPESA_CALLBACK_URL.trim() 
+  const callbackURL = process.env.MPESA_CALLBACK_URL
+    ? process.env.MPESA_CALLBACK_URL.trim()
     : 'https://jayness-cbo.onrender.com/api/payments/callback';
+
+  const intentId = generateIntentId();
+  const intent = await PaymentIntent.create({
+    intentId,
+    user: req.user ? req.user._id : null,
+    programId: programId || null,
+    phoneNumber,
+    amount,
+    status: 'Initiated',
+  });
 
   const requestBody = {
     BusinessShortCode: shortCode,
@@ -202,78 +288,97 @@ const initiateSTKPush = async (req, res) => {
   try {
     const response = await axios.post(url, requestBody, {
       headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json', 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
     });
 
-    console.log("✅ STK PUSH SUCCESS:", response.data);
+    intent.checkoutRequestID = response.data.CheckoutRequestID;
+    intent.status = 'Pending';
+    await intent.save();
 
-    // Save transaction
     await Payment.create({
-      user: req.user ? req.user._id : null, // If logged in, save ID. If not, save null.
-      programId: programId || null, 
+      user: req.user ? req.user._id : null,
+      programId: programId || null,
       phoneNumber,
       amount,
       checkoutRequestID: response.data.CheckoutRequestID,
+      intentId,
+      paymentIntent: intent._id,
       status: 'Pending',
+      source: req.user ? 'authenticated' : 'public',
     });
 
-    res.status(200).json({ 
-      message: "STK Push Initiated successfully", 
-      data: response.data 
+    await logAudit({
+      req,
+      action: 'payment.intent.created',
+      entityType: 'PaymentIntent',
+      entityId: intent._id,
+      after: {
+        intentId: intent.intentId,
+        amount,
+        phoneNumber,
+        checkoutRequestID: response.data.CheckoutRequestID,
+      },
     });
 
+    res.status(200).json({
+      message: 'STK Push Initiated successfully',
+      intentId,
+      data: response.data,
+    });
   } catch (error) {
-    console.error("❌ STK PUSH ERROR:", error.response ? error.response.data : error.message);
-    res.status(500).json({ message: "STK Push Failed", error: error.message });
+    intent.status = 'Failed';
+    intent.mismatchReason = error.message;
+    await intent.save();
+
+    await logAudit({
+      req,
+      action: 'payment.intent.failed',
+      entityType: 'PaymentIntent',
+      entityId: intent._id,
+      metadata: { error: error.message },
+      status: 'failure',
+    });
+
+    res.status(500).json({ message: 'STK Push Failed', error: error.message });
   }
 };
 
-// 3. Handle Callback
 const mpesaCallback = async (req, res) => {
   try {
-    console.log("📡 CALLBACK RECEIVED");
-
     const callbackData = req.body.Body.stkCallback;
     const checkoutRequestID = callbackData.CheckoutRequestID;
+    const payment = await Payment.findOne({ checkoutRequestID });
 
-    // ResultCode 0 means Success
-    if (String(callbackData.ResultCode) === '0') {
-      console.log("✅ Payment Successful!");
-      
-      const receipt = extractMpesaReceiptCode(callbackData);
-
-      const payment = await Payment.findOne({ checkoutRequestID });
-      
-      if (payment) {
-        await markPaymentCompleted(payment, receipt);
-        if (!receipt) {
-          console.warn(`⚠️ Payment marked completed but receipt code missing for ${checkoutRequestID}. Awaiting later metadata sync.`);
-        }
-      }
-    } else {
-      console.log("❌ Payment Failed/Cancelled (Code " + callbackData.ResultCode + ")");
-      const payment = await Payment.findOne({ checkoutRequestID });
-      if (payment) {
-        payment.status = mapMpesaResultCodeToStatus(callbackData.ResultCode);
-        await payment.save();
-      }
+    if (!payment) {
+      return res.status(200).json({ message: 'Callback received with unknown checkout request' });
     }
 
-    res.status(200).json({ message: "Callback received" });
+    if (String(callbackData.ResultCode) === '0') {
+      const receipt = extractMpesaReceiptCode(callbackData);
+      await markPaymentCompleted(payment, receipt, null, {
+        source: 'system_job',
+        trigger: 'callback',
+      });
+    } else {
+      payment.status = mapMpesaResultCodeToStatus(callbackData.ResultCode);
+      await payment.save();
+      await syncIntentFromPayment(payment, null, { source: 'system_job', trigger: 'callback' });
+    }
+
+    res.status(200).json({ message: 'Callback received' });
   } catch (error) {
-    console.error("Callback Error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error('Callback Error:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
-// 4. Check Payment Status (Frontend Polls This)
 const checkPaymentStatus = async (req, res) => {
   try {
     const { checkoutRequestID } = req.params;
     const payment = await Payment.findOne({ checkoutRequestID });
-    
+
     if (!payment) {
       return res.status(404).json({ message: 'Payment record not found' });
     }
@@ -286,19 +391,18 @@ const checkPaymentStatus = async (req, res) => {
       status: latest.status,
       receipt: latest.mpesaReceiptNumber,
       receiptPending: latest.status === 'Completed' && !latest.mpesaReceiptNumber,
+      reconciliationStatus: latest.reconciliationStatus,
+      intentId: latest.intentId,
     });
-
   } catch (error) {
-    console.error("Check Status Error:", error);
-    res.status(500).json({ message: "Could not check status" });
+    console.error('Check Status Error:', error);
+    res.status(500).json({ message: 'Could not check status' });
   }
 };
 
-// 5. Get Payment Receipt (Only confirmed payments)
 const getPaymentReceipt = async (req, res) => {
   try {
     const { checkoutRequestID } = req.params;
-
     const payment = await Payment.findOne({ checkoutRequestID });
     if (!payment) {
       return res.status(404).json({ message: 'Payment record not found' });
@@ -320,11 +424,13 @@ const getPaymentReceipt = async (req, res) => {
 
     res.status(200).json({
       checkoutRequestID: latest.checkoutRequestID,
+      intentId: latest.intentId || null,
       receiptNumber: latest.mpesaReceiptNumber,
       amount: latest.amount,
       phoneNumber: latest.phoneNumber,
       transactionDate: latest.transactionDate || latest.updatedAt || latest.createdAt,
       status: latest.status,
+      reconciliationStatus: latest.reconciliationStatus,
       payerName: latest.user?.name || 'Anonymous Donor',
       payerEmail: latest.user?.email || null,
       programTitle: latest.programId?.title || 'General Contribution',
@@ -336,7 +442,6 @@ const getPaymentReceipt = async (req, res) => {
   }
 };
 
-// 6. Cancel Pending Payment
 const cancelPendingPayment = async (req, res) => {
   try {
     const { checkoutRequestID } = req.params;
@@ -356,6 +461,15 @@ const cancelPendingPayment = async (req, res) => {
 
     payment.status = 'Cancelled';
     await payment.save();
+    await syncIntentFromPayment(payment, req, { source: 'api', trigger: 'cancel' });
+
+    await logAudit({
+      req,
+      action: 'payment.cancelled',
+      entityType: 'Payment',
+      entityId: payment._id,
+      after: { status: 'Cancelled' },
+    });
 
     res.status(200).json({ message: 'Payment cancelled', status: payment.status });
   } catch (error) {
@@ -364,30 +478,100 @@ const cancelPendingPayment = async (req, res) => {
   }
 };
 
-// 7. Get My Transaction History
 const getMyHistory = async (req, res) => {
   try {
-    // Only works if user is logged in
     if (!req.user) {
-        return res.status(401).json({ message: "Not authorized" });
+      return res.status(401).json({ message: 'Not authorized' });
     }
 
-    const payments = await Payment.find({ user: req.user._id })
-      .sort({ createdAt: -1 });
-
+    const payments = await Payment.find({ user: req.user._id }).sort({ createdAt: -1 });
     res.json(payments);
   } catch (error) {
-    console.error("History Error:", error);
-    res.status(500).json({ message: "Could not fetch history" });
+    console.error('History Error:', error);
+    res.status(500).json({ message: 'Could not fetch history' });
   }
 };
 
-module.exports = { 
-  getAccessToken, 
-  initiateSTKPush, 
-  mpesaCallback, 
-  checkPaymentStatus, 
+const getReconciliationQueue = async (req, res) => {
+  try {
+    const queue = await PaymentIntent.find({
+      reconciliationStatus: { $in: ['Mismatch', 'NeedsReview'] },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(100)
+      .populate('user', 'name email')
+      .populate('programId', 'title');
+
+    res.json(queue);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const resolveReconciliationItem = async (req, res) => {
+  try {
+    const { intentId } = req.params;
+    const { reconciliationStatus = 'Matched', resolutionNote = '' } = req.body;
+
+    if (!['Matched', 'Mismatch', 'NeedsReview'].includes(reconciliationStatus)) {
+      return res.status(400).json({ message: 'Invalid reconciliation status' });
+    }
+
+    const intent = await PaymentIntent.findOne({ intentId });
+    if (!intent) {
+      return res.status(404).json({ message: 'Payment intent not found' });
+    }
+
+    const before = {
+      reconciliationStatus: intent.reconciliationStatus,
+      mismatchReason: intent.mismatchReason,
+      resolutionNote: intent.resolutionNote,
+    };
+
+    intent.reconciliationStatus = reconciliationStatus;
+    intent.resolutionNote = resolutionNote || null;
+    intent.resolvedBy = req.user?._id || null;
+    intent.resolvedAt = new Date();
+    if (reconciliationStatus === 'Matched') {
+      intent.mismatchReason = null;
+    }
+    await intent.save();
+
+    await Payment.updateMany(
+      { $or: [{ intentId: intent.intentId }, { paymentIntent: intent._id }] },
+      {
+        reconciliationStatus: intent.reconciliationStatus,
+        mismatchReason: intent.mismatchReason,
+      }
+    );
+
+    await logAudit({
+      req,
+      action: 'payment.reconciliation.resolved',
+      entityType: 'PaymentIntent',
+      entityId: intent._id,
+      before,
+      after: {
+        reconciliationStatus: intent.reconciliationStatus,
+        mismatchReason: intent.mismatchReason,
+        resolutionNote: intent.resolutionNote,
+      },
+    });
+
+    res.json(intent);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getAccessToken,
+  initiateSTKPush,
+  mpesaCallback,
+  checkPaymentStatus,
   getPaymentReceipt,
   cancelPendingPayment,
-  getMyHistory 
+  getMyHistory,
+  getReconciliationQueue,
+  resolveReconciliationItem,
 };

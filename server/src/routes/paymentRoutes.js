@@ -1,7 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { getAccessToken, initiateSTKPush, mpesaCallback, checkPaymentStatus, getPaymentReceipt, cancelPendingPayment, getMyHistory } = require('../controllers/paymentController');
-const { protect } = require('../middleware/authMiddleware'); 
+const {
+  getAccessToken,
+  initiateSTKPush,
+  mpesaCallback,
+  checkPaymentStatus,
+  getPaymentReceipt,
+  cancelPendingPayment,
+  getMyHistory,
+  getReconciliationQueue,
+  resolveReconciliationItem,
+} = require('../controllers/paymentController');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 // 1. Authenticated Payment Route (User logs in first)
 // URL: /api/payments/pay
@@ -26,5 +36,9 @@ router.patch('/cancel/:checkoutRequestID', cancelPendingPayment);
 
 // 7. Get user's history
 router.get('/history', protect, getMyHistory);
+
+// 8. Admin reconciliation queue
+router.get('/reconciliation/queue', protect, admin, getReconciliationQueue);
+router.patch('/reconciliation/:intentId/resolve', protect, admin, resolveReconciliationItem);
 
 module.exports = router;

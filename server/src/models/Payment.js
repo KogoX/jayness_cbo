@@ -24,6 +24,16 @@ const paymentSchema = new mongoose.Schema({
     required: true, 
     unique: true
   },
+  intentId: {
+    type: String,
+    default: null,
+    index: true,
+  },
+  paymentIntent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PaymentIntent',
+    default: null,
+  },
   mpesaReceiptNumber: {
     type: String,
   },
@@ -31,6 +41,20 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     enum: ['Pending', 'Completed', 'Failed', 'Cancelled'],
     default: 'Pending',
+  },
+  reconciliationStatus: {
+    type: String,
+    enum: ['NotChecked', 'Matched', 'Mismatch', 'NeedsReview'],
+    default: 'NotChecked',
+  },
+  mismatchReason: {
+    type: String,
+    default: null,
+  },
+  source: {
+    type: String,
+    enum: ['authenticated', 'public', 'system'],
+    default: 'public',
   },
   transactionDate: {
     type: Date,
