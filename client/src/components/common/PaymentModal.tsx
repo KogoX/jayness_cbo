@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import apiClient from '../../api/axiosClient';
 import LoadingSpinner from './LoadingSpinner';
 import { downloadReceiptPdf, type ReceiptPayload } from '../../utils/receipt';
@@ -22,6 +22,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
   const [checkoutRequestID, setCheckoutRequestID] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [mpesaReceiptCode, setMpesaReceiptCode] = useState<string | null>(null);
+  const pollErrorCountRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +36,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
       setCheckoutRequestID(null);
       setIsCompleted(false);
       setDownloadingReceipt(false);
+      setMpesaReceiptCode(null);
+      pollErrorCountRef.current = 0;
     }
   }, [isOpen, programId]);
 
@@ -52,10 +56,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
       interval = setInterval(async () => {
         try {
           const response = await apiClient.get(`/payments/status/${checkoutRequestID}`);
-          const status = response.data.status;
+          const { status, receipt } = response.data;
+          pollErrorCountRef.current = 0;
 
           if (status === 'Completed') {
-            setMessage('Payment received successfully. Thank you.');
+            setMpesaReceiptCode(receipt || null);
+            setMessage(
+              receipt
+                ? `Payment received successfully. M-Pesa code: ${receipt}`
+                : 'Payment received successfully. M-Pesa transaction code is still syncing.'
+            );
             setError(null);
             setIsPolling(false);
             setLoading(false);
@@ -75,6 +85,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
           }
         } catch (err) {
           console.error('Polling error', err);
+          pollErrorCountRef.current += 1;
+          if (pollErrorCountRef.current >= 3) {
+            setError('Could not confirm transaction status. Please check your Financials history.');
+            setIsPolling(false);
+            setLoading(false);
+          }
         }
       }, 3000);
     }
@@ -112,12 +128,33 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
 
     try {
       const response = await apiClient.get(`/payments/receipt/${checkoutRequestID}`);
+      setMpesaReceiptCode(response.data?.receiptNumber || mpesaReceiptCode);
       await downloadReceiptPdf(response.data as ReceiptPayload);
       setMessage('Receipt downloaded successfully.');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Could not download receipt.');
     } finally {
       setDownloadingReceipt(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    if (!checkoutRequestID) return;
+    try {
+      const response = await apiClient.get(`/payments/status/${checkoutRequestID}`);
+      const { status, receipt } = response.data;
+
+      if (status === 'Completed' && receipt) {
+        setMpesaReceiptCode(receipt);
+        setMessage(`Payment received successfully. M-Pesa code: ${receipt}`);
+        setError(null);
+      } else if (status === 'Failed') {
+        setError('Payment failed. Please try again.');
+      } else if (status === 'Cancelled') {
+        setError('Payment was cancelled.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not refresh payment status.');
     }
   };
 
@@ -215,6 +252,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 border border-green-200">
               Payment is confirmed. You can download your receipt now.
             </div>
+            <div className="rounded-lg bg-gray-50 p-4 border border-gray-200">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">M-Pesa Transaction Code</p>
+              <p className="font-mono text-sm text-gray-800">{mpesaReceiptCode || 'Pending sync...'}</p>
+            </div>
             <div className="flex gap-3">
               <button
                 type="button"
@@ -232,6 +273,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
                 {downloadingReceipt ? 'Preparing...' : 'Download Receipt'}
               </button>
             </div>
+            {!mpesaReceiptCode && (
+              <button
+                type="button"
+                onClick={handleRefreshStatus}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              >
+                Refresh Transaction Code
+              </button>
+            )}
           </div>
         ) : (
           <form onSubmit={handlePayment} className="space-y-5">
