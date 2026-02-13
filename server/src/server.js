@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db'); 
 const path = require('path');
+const requestContext = require('./middleware/requestContext');
 
 // Load env vars
 dotenv.config();
@@ -24,6 +25,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(requestContext);
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));

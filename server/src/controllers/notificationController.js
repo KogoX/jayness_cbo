@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { logAudit } = require('../utils/auditLogger');
 
 // @desc    Send a notification (Admin only)
 // @route   POST /api/notifications
@@ -19,6 +20,12 @@ const sendNotification = async (req, res) => {
       }));
 
       await Notification.insertMany(notifications);
+      await logAudit({
+        req,
+        action: 'notification.broadcast.sent',
+        entityType: 'Notification',
+        metadata: { recipients: users.length, type: type || 'info' },
+      });
       res.status(201).json({ message: `Sent to ${users.length} users` });
 
     } else {
@@ -28,6 +35,13 @@ const sendNotification = async (req, res) => {
         title,
         message,
         type: type || 'info'
+      });
+      await logAudit({
+        req,
+        action: 'notification.single.sent',
+        entityType: 'Notification',
+        entityId: userId,
+        metadata: { type: type || 'info' },
       });
       res.status(201).json({ message: 'Notification sent' });
     }
@@ -57,6 +71,13 @@ const markAsRead = async (req, res) => {
     if (notification && notification.recipient.toString() === req.user._id.toString()) {
       notification.isRead = true;
       await notification.save();
+      await logAudit({
+        req,
+        action: 'notification.read',
+        entityType: 'Notification',
+        entityId: notification._id,
+        after: { isRead: true },
+      });
       res.json(notification);
     } else {
       res.status(404).json({ message: 'Notification not found' });
