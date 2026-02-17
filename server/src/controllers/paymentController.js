@@ -42,6 +42,12 @@ const getCallbackItemValue = (items, expectedName) => {
   return found?.Value;
 };
 
+const hasUsableReceiptCode = (value) => {
+  if (value === null || value === undefined) return false;
+  const normalized = String(value).trim();
+  return normalized.length > 0 && normalized.toUpperCase() !== 'N/A';
+};
+
 const extractMpesaReceiptCode = (callbackData) => {
   const items = callbackData?.CallbackMetadata?.Item || [];
   const fromKnownKey =
@@ -50,6 +56,36 @@ const extractMpesaReceiptCode = (callbackData) => {
     getCallbackItemValue(items, 'ReceiptNumber');
 
   if (fromKnownKey) return String(fromKnownKey);
+
+  for (const item of items) {
+    if (typeof item?.Value === 'string') {
+      const trimmed = item.Value.trim();
+      if (/^[A-Z0-9]{8,15}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const extractReceiptFromStatusQuery = (queryData) => {
+  const topLevelReceipt =
+    queryData?.MpesaReceiptNumber || queryData?.['M-PesaReceiptNumber'] || queryData?.ReceiptNumber;
+
+  if (hasUsableReceiptCode(topLevelReceipt)) {
+    return String(topLevelReceipt).trim();
+  }
+
+  const items = queryData?.ResultParameters?.ResultParameter || queryData?.ResultParameters?.Item || [];
+  const fromKnownKey =
+    getCallbackItemValue(items, 'MpesaReceiptNumber') ||
+    getCallbackItemValue(items, 'M-PesaReceiptNumber') ||
+    getCallbackItemValue(items, 'ReceiptNumber');
+
+  if (hasUsableReceiptCode(fromKnownKey)) {
+    return String(fromKnownKey).trim();
+  }
 
   for (const item of items) {
     if (typeof item?.Value === 'string') {
@@ -189,10 +225,12 @@ const markPaymentCompleted = async (payment, receipt, req = null, context = {}) 
   const wasCompleted = payment.status === 'Completed';
 
   payment.status = 'Completed';
-  if (receipt && receipt !== 'N/A') {
-    payment.mpesaReceiptNumber = receipt;
+  if (hasUsableReceiptCode(receipt)) {
+    payment.mpesaReceiptNumber = String(receipt).trim();
   }
-  payment.transactionDate = new Date();
+  if (!payment.transactionDate) {
+    payment.transactionDate = new Date();
+  }
   await payment.save();
 
   if (!wasCompleted && payment.programId) {
@@ -207,7 +245,10 @@ const markPaymentCompleted = async (payment, receipt, req = null, context = {}) 
 };
 
 const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
-  if (payment.status !== 'Pending') {
+  const needsReceiptSync =
+    payment.status === 'Completed' && (!payment.mpesaReceiptNumber || payment.mpesaReceiptNumber === 'N/A');
+
+  if (payment.status !== 'Pending' && !needsReceiptSync) {
     return payment;
   }
 
@@ -216,11 +257,13 @@ const refreshPendingPaymentStatus = async (payment, checkoutRequestID) => {
     const mappedStatus = mapMpesaResultCodeToStatus(mpesaStatus.ResultCode);
 
     if (mappedStatus === 'Completed') {
-      await markPaymentCompleted(payment, mpesaStatus.MpesaReceiptNumber || payment.mpesaReceiptNumber, null, {
+      const receiptCode =
+        extractReceiptFromStatusQuery(mpesaStatus) || extractMpesaReceiptCode({ CallbackMetadata: mpesaStatus });
+      await markPaymentCompleted(payment, receiptCode || payment.mpesaReceiptNumber, null, {
         source: 'system_job',
-        trigger: 'status_query',
+        trigger: needsReceiptSync ? 'receipt_sync' : 'status_query',
       });
-    } else if (mappedStatus === 'Failed' || mappedStatus === 'Cancelled') {
+    } else if (payment.status === 'Pending' && (mappedStatus === 'Failed' || mappedStatus === 'Cancelled')) {
       payment.status = mappedStatus;
       await payment.save();
       await syncIntentFromPayment(payment, null, { source: 'system_job', trigger: 'status_query' });
@@ -390,7 +433,8 @@ const checkPaymentStatus = async (req, res) => {
     res.status(200).json({
       status: latest.status,
       receipt: latest.mpesaReceiptNumber,
-      receiptPending: latest.status === 'Completed' && !latest.mpesaReceiptNumber,
+      receiptPending:
+        latest.status === 'Completed' && (!latest.mpesaReceiptNumber || latest.mpesaReceiptNumber === 'N/A'),
       reconciliationStatus: latest.reconciliationStatus,
       intentId: latest.intentId,
     });
