@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-white pt-16 pb-8">
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+      <div className="w-full px-4 md:px-8 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             <img src="/logo.svg" alt="Jayness Logo" loading="lazy" decoding="async" className="h-10 w-auto bg-white rounded-full p-1" />
@@ -97,7 +97,7 @@ const Footer: React.FC = () => {
         </div>
       </div>
 
-      <div className="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
+      <div className="border-t border-gray-800 pt-8 px-4 md:px-8 lg:px-12 text-center text-gray-500 text-sm">
         <p>&copy; {new Date().getFullYear()} Jayness Community Based Organization. All rights reserved.</p>
       </div>
     </footer>

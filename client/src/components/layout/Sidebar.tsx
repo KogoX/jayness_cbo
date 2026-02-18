@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { notifyAuthChanged } from '../../utils/authEvents';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,7 +8,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -19,13 +17,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
     return location.pathname.startsWith(path)
       ? 'bg-purple-50 border-primary text-primary border-l-4 font-medium'
       : 'text-gray-600 hover:bg-gray-50 hover:text-primary border-l-4 border-transparent';
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    notifyAuthChanged();
-    navigate('/login');
   };
 
   return (
@@ -39,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
 
       <aside
         className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col
         lg:translate-x-0 lg:static lg:shadow-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}
@@ -53,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
           </button>
         </div>
 
-        <nav className="mt-6 flex flex-col px-4 gap-2">
+        <nav className="mt-6 flex-1 flex flex-col px-4 gap-2 pb-6">
           <Link
             to="/"
             onClick={onClose}
@@ -119,15 +110,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
             Impact & Gallery
           </Link>
         </nav>
-
-        <div className="absolute bottom-0 w-full p-6 border-t border-gray-100">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
-          >
-            Logout
-          </button>
-        </div>
       </aside>
     </>
   );
