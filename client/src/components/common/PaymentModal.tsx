@@ -225,9 +225,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
           </div>
         ) : isCompleted ? (
           <div className="space-y-4">
-            <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 border border-green-200">
-              Your payment is successfull thank you.
-            </div>
             <div className="flex gap-3">
               <button
                 type="button"
