@@ -38,8 +38,10 @@ const normalizeItemName = (name = '') => String(name).toLowerCase().replace(/[^a
 
 const getCallbackItemValue = (items, expectedName) => {
   const expected = normalizeItemName(expectedName);
-  const found = (items || []).find((item) => normalizeItemName(item?.Name) === expected);
-  return found?.Value;
+  const found = (items || []).find(
+    (item) => normalizeItemName(item?.Name || item?.name || item?.Key || item?.key) === expected
+  );
+  return found?.Value ?? found?.value;
 };
 
 const hasUsableReceiptCode = (value) => {
@@ -65,6 +67,10 @@ const extractMpesaReceiptCode = (callbackData) => {
       }
     }
   }
+
+  const resultDesc = String(callbackData?.ResultDesc || '').trim();
+  const matchFromDesc = resultDesc.match(/\b[A-Z0-9]{8,15}\b/i);
+  if (matchFromDesc) return matchFromDesc[0];
 
   return undefined;
 };
@@ -300,9 +306,8 @@ const initiateSTKPush = async (req, res) => {
   const passkey = process.env.MPESA_PASSKEY.trim();
   const password = Buffer.from(shortCode + passkey + timestamp).toString('base64');
   const url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
-  const callbackURL = process.env.MPESA_CALLBACK_URL
-    ? process.env.MPESA_CALLBACK_URL.trim()
-    : 'https://jayness-cbo.onrender.com/api/payments/callback';
+  const callbackURL = process.env.MPESA_CALLBACK_URL?.trim()
+    || `${req.protocol}://${req.get('host')}/api/payments/callback`;
 
   const intentId = generateIntentId();
   const intent = await PaymentIntent.create({
@@ -390,7 +395,10 @@ const initiateSTKPush = async (req, res) => {
 
 const mpesaCallback = async (req, res) => {
   try {
-    const callbackData = req.body.Body.stkCallback;
+    const callbackData = req.body?.Body?.stkCallback || req.body?.stkCallback;
+    if (!callbackData) {
+      return res.status(400).json({ message: 'Invalid callback payload' });
+    }
     const checkoutRequestID = callbackData.CheckoutRequestID;
     const payment = await Payment.findOne({ checkoutRequestID });
 
@@ -399,7 +407,18 @@ const mpesaCallback = async (req, res) => {
     }
 
     if (String(callbackData.ResultCode) === '0') {
-      const receipt = extractMpesaReceiptCode(callbackData);
+      let receipt = extractMpesaReceiptCode(callbackData);
+      if (!hasUsableReceiptCode(receipt)) {
+        try {
+          const statusData = await queryStkStatusFromMpesa(checkoutRequestID);
+          receipt = extractReceiptFromStatusQuery(statusData) || receipt;
+        } catch (statusError) {
+          console.error(
+            'Callback fallback query failed:',
+            statusError.response ? statusError.response.data : statusError.message
+          );
+        }
+      }
       await markPaymentCompleted(payment, receipt, null, {
         source: 'system_job',
         trigger: 'callback',
