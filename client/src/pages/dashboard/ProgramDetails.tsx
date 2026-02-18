@@ -43,7 +43,10 @@ const ProgramDetails: React.FC = () => {
     );
   }
 
-  const percentage = Math.min((program.currentRaised / program.targetBudget) * 100, 100);
+  const rawPercentage =
+    program.targetBudget > 0 ? (program.currentRaised / program.targetBudget) * 100 : 0;
+  const percentage = Math.min(Math.max(rawPercentage, 0), 100);
+  const percentageLabel = `${Math.round(percentage)}%`;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -118,6 +121,7 @@ const ProgramDetails: React.FC = () => {
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-primary sticky top-24">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Fundraising Progress</h3>
+            <p className="text-sm font-semibold text-gray-600 mb-2">{percentageLabel} funded</p>
 
             <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
               <div

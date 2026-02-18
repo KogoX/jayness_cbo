@@ -8,7 +8,10 @@ interface Props {
 }
 
 const ProgramCard: React.FC<Props> = ({ program, isPublic = false }) => {
-  const percentage = Math.min((program.currentRaised / program.targetBudget) * 100, 100);
+  const rawPercentage =
+    program.targetBudget > 0 ? (program.currentRaised / program.targetBudget) * 100 : 0;
+  const percentage = Math.min(Math.max(rawPercentage, 0), 100);
+  const percentageLabel = `${Math.round(percentage)}%`;
 
   const linkPath = isPublic ? `/public/programs/${program._id}` : `/dashboard/programs/${program._id}`;
 
@@ -67,6 +70,9 @@ const ProgramCard: React.FC<Props> = ({ program, isPublic = false }) => {
             <span className="text-primary">Target: Ksh {program.targetBudget.toLocaleString()}</span>
           </div>
 
+          <div className="mb-1 flex justify-end">
+            <span className="text-xs font-semibold text-gray-600">{percentageLabel} funded</span>
+          </div>
           <div className="w-full bg-gray-100 rounded-full h-2 mb-4 overflow-hidden">
             <div
               className={`h-2 rounded-full transition-all duration-1000 ease-out ${
