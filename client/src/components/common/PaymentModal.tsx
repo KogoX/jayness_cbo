@@ -3,6 +3,8 @@ import apiClient from '../../api/axiosClient';
 import LoadingSpinner from './LoadingSpinner';
 import { downloadReceiptPdf, type ReceiptPayload } from '../../utils/receipt';
 
+const MAX_POLL_ERRORS = 10;
+
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -61,7 +63,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
 
           if (status === 'Completed') {
             setMpesaReceiptCode(receipt || null);
-            setMessage('Your payment is successfull. Thank you.');
+            setMessage('Your payment was successful. Thank you.');
             setError(null);
             setIsPolling(false);
             setLoading(false);
@@ -78,14 +80,19 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             setIsPolling(false);
             setLoading(false);
             setIsCompleted(false);
+          } else {
+            // Keep polling on pending and clear transient network errors.
+            setError(null);
           }
         } catch (err) {
           console.error('Polling error', err);
           pollErrorCountRef.current += 1;
-          if (pollErrorCountRef.current >= 3) {
+          if (pollErrorCountRef.current >= MAX_POLL_ERRORS) {
             setError('Could not confirm transaction status. Please check your Financials history.');
             setIsPolling(false);
             setLoading(false);
+          } else {
+            setError('Temporary connection issue while verifying payment. Retrying...');
           }
         }
       }, 3000);
