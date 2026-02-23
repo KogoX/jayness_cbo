@@ -63,9 +63,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
 
           if (status === 'Completed') {
             if (receiptPending || !receipt) {
-              setMessage('Payment confirmed. Finalizing M-Pesa confirmation code...');
+              setMessage('Payment received. Finalizing M-Pesa confirmation code...');
               setError(null);
-              setIsCompleted(true);
+              setIsCompleted(false);
               // keep polling until receipt code is captured
             } else {
               setMpesaReceiptCode(receipt || null);
@@ -112,6 +112,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
     if (!checkoutRequestID) return;
 
     setDownloadingReceipt(true);
+    setMessage(null);
     setError(null);
 
     try {
@@ -120,7 +121,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
       await downloadReceiptPdf(response.data as ReceiptPayload);
       setMessage('Receipt downloaded successfully.');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not download receipt.');
+      const status = err?.response?.status;
+      if (status === 409) {
+        setError('Payment is confirmed but M-Pesa receipt code is still syncing. Please try again shortly.');
+      } else {
+        setError(err.response?.data?.message || 'Could not download receipt.');
+      }
     } finally {
       setDownloadingReceipt(false);
     }
