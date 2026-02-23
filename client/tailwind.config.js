@@ -3,23 +3,9 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
-    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
-      keyframes: {
-        authFade: {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-        authScaleIn: {
-          "0%": { opacity: "0", transform: "scale(0.96)" },
-          "100%": { opacity: "1", transform: "scale(1)" },
-        },
-      },
       colors: {
         // 1. Purple (Primary Brand Color) - Used for Buttons, Headers, Active States
         primary: {
