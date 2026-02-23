@@ -58,16 +58,23 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
       interval = setInterval(async () => {
         try {
           const response = await apiClient.get(`/payments/status/${checkoutRequestID}`);
-          const { status, receipt } = response.data;
+          const { status, receipt, receiptPending } = response.data;
           pollErrorCountRef.current = 0;
 
           if (status === 'Completed') {
-            setMpesaReceiptCode(receipt || null);
-            setMessage('Your payment was successful. Thank you.');
-            setError(null);
-            setIsPolling(false);
-            setLoading(false);
-            setIsCompleted(true);
+            if (receiptPending || !receipt) {
+              setMessage('Payment confirmed. Finalizing M-Pesa confirmation code...');
+              setError(null);
+              setIsCompleted(true);
+              // keep polling until receipt code is captured
+            } else {
+              setMpesaReceiptCode(receipt || null);
+              setMessage(`Your payment was successful. M-Pesa code: ${receipt}`);
+              setError(null);
+              setIsPolling(false);
+              setLoading(false);
+              setIsCompleted(true);
+            }
           } else if (status === 'Failed') {
             setError('Payment failed. Please try again.');
             setMessage(null);
@@ -221,7 +228,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
         {loading && isPolling ? (
           <div className="flex flex-col items-center justify-center py-6">
             <LoadingSpinner />
-            <p className="text-sm text-gray-500 mt-4 animate-pulse">Waiting for M-Pesa PIN...</p>
+            <p className="text-sm text-gray-500 mt-4 animate-pulse">
+              {isCompleted ? 'Payment received. Fetching confirmation code...' : 'Waiting for M-Pesa PIN...'}
+            </p>
             <button
               type="button"
               onClick={handleCancelTransaction}
@@ -232,6 +241,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
           </div>
         ) : isCompleted ? (
           <div className="space-y-4">
+            {mpesaReceiptCode && (
+              <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700 border border-emerald-200">
+                Confirmation Code: <span className="font-semibold">{mpesaReceiptCode}</span>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
