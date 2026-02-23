@@ -108,28 +108,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
     return () => clearInterval(interval);
   }, [isPolling, checkoutRequestID, onClose]);
 
-  const handleCancelTransaction = async () => {
-    if (!checkoutRequestID) {
-      setLoading(false);
-      setIsPolling(false);
-      onClose();
-      return;
-    }
-
-    try {
-      await apiClient.patch(`/payments/cancel/${checkoutRequestID}`);
-      setError('Payment was cancelled.');
-      setMessage(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not cancel payment.');
-    } finally {
-      setIsPolling(false);
-      setLoading(false);
-      setCheckoutRequestID(null);
-      setIsCompleted(false);
-    }
-  };
-
   const handleDownloadReceipt = async () => {
     if (!checkoutRequestID) return;
 
@@ -197,8 +175,18 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border-t-4 border-secondary transform transition-all">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border-t-4 border-secondary transform transition-all"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-xl font-bold text-gray-800">
@@ -207,7 +195,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             {programTitle && <p className="text-sm text-primary font-medium">{programTitle}</p>}
           </div>
           <button
-            onClick={isPolling ? handleCancelTransaction : onClose}
+            onClick={onClose}
             className="text-gray-400 hover:text-red-500 transition"
           >
             x
@@ -231,12 +219,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             <p className="text-sm text-gray-500 mt-4 animate-pulse">
               {isCompleted ? 'Payment received. Fetching confirmation code...' : 'Waiting for M-Pesa PIN...'}
             </p>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Processing may take some time. You can close this popup and confirm payment later from your history.
+            </p>
             <button
               type="button"
-              onClick={handleCancelTransaction}
+              onClick={onClose}
               className="mt-4 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
             >
-              Cancel Transaction
+              Close Popup
             </button>
           </div>
         ) : isCompleted ? (
@@ -298,7 +289,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, programId,
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={isPolling ? handleCancelTransaction : onClose}
+                onClick={onClose}
                 className="flex-1 px-4 py-3 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
                 Cancel
