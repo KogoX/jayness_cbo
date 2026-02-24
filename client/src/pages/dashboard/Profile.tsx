@@ -107,7 +107,7 @@ const Profile: React.FC = () => {
   const getImageUrl = (path: string) => {
     if (!path) return `https://ui-avatars.com/api/?name=${name}&background=6B21A8&color=fff`;
     if (path.startsWith('http')) return path;
-    return `http://localhost:5000${path}`;
+    return `https://jayness-cbo.onrender.com${path}`;
   };
 
   return (

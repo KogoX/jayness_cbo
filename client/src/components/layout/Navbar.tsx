@@ -24,7 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onMenuClick }) => {
   const getImageUrl = (path?: string) => {
     if (!path) return undefined;
     if (path.startsWith('http')) return path;
-    return `http://localhost:5000${path}`;
+    return `https://jayness-cbo.onrender.com${path}`;
   };
 
   // Fetch Notifications on Load
