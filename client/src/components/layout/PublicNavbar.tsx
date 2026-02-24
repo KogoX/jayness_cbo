@@ -17,6 +17,7 @@ const PublicNavbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authAnchorEl, setAuthAnchorEl] = useState<HTMLElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,6 +33,8 @@ const PublicNavbar: React.FC = () => {
   const [hasLoadedSearchData, setHasLoadedSearchData] = useState(false);
   
   const searchRef = useRef<HTMLDivElement>(null);
+  const desktopLoginButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileLoginButtonRef = useRef<HTMLButtonElement>(null);
 
   // Check if user is logged in and listen for auth updates.
   useEffect(() => {
@@ -205,8 +208,9 @@ const PublicNavbar: React.FC = () => {
     setSearchQuery('');
   };
 
-  const openAuthModal = (mode: 'signin' | 'signup' = 'signin') => {
+  const openAuthModal = (mode: 'signin' | 'signup' = 'signin', anchorEl: HTMLElement | null = null) => {
     setAuthMode(mode);
+    setAuthAnchorEl(anchorEl);
     setIsAuthModalOpen(true);
     setIsOpen(false);
   };
@@ -215,7 +219,10 @@ const PublicNavbar: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const authParam = params.get('auth');
     if (!user && (authParam === 'signin' || authParam === 'signup')) {
-      openAuthModal(authParam);
+      openAuthModal(
+        authParam,
+        desktopLoginButtonRef.current || mobileLoginButtonRef.current
+      );
       params.delete('auth');
       navigate(
         {
@@ -441,8 +448,9 @@ const PublicNavbar: React.FC = () => {
             ) : (
               <div className="flex items-center space-x-3">
                 <button
+                  ref={desktopLoginButtonRef}
                   type="button"
-                  onClick={() => openAuthModal('signin')}
+                  onClick={() => openAuthModal('signin', desktopLoginButtonRef.current)}
                   className="text-sm font-semibold text-gray-600 hover:text-primary transition px-2"
                 >
                   Log In
@@ -592,8 +600,9 @@ const PublicNavbar: React.FC = () => {
             ) : (
               <>
                 <button
+                  ref={mobileLoginButtonRef}
                   type="button"
-                  onClick={() => openAuthModal('signin')}
+                  onClick={() => openAuthModal('signin', mobileLoginButtonRef.current)}
                   className="w-full text-center py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition"
                 >
                   Log In
@@ -608,9 +617,14 @@ const PublicNavbar: React.FC = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         initialMode={authMode}
-        onClose={() => setIsAuthModalOpen(false)}
+        anchorEl={authAnchorEl}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setAuthAnchorEl(null);
+        }}
         onSuccess={() => {
           setIsAuthModalOpen(false);
+          setAuthAnchorEl(null);
           setIsOpen(false);
           navigate('/dashboard');
         }}

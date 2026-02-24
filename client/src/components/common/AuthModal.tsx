@@ -7,6 +7,7 @@ type AuthMode = 'signin' | 'signup';
 interface AuthModalProps {
   isOpen: boolean;
   initialMode?: AuthMode;
+  anchorEl?: HTMLElement | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -16,7 +17,7 @@ const FOCUSABLE_SELECTORS =
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', onClose, onSuccess }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', anchorEl = null, onClose, onSuccess }) => {
   const [isMounted, setIsMounted] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -26,6 +27,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -99,6 +101,30 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen || !anchorEl) {
+      setPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const rect = anchorEl.getBoundingClientRect();
+      const width = Math.min(420, window.innerWidth - 16);
+      const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left + rect.width / 2 - width / 2));
+      const top = rect.bottom + 10;
+      setPosition({ top, left, width });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [anchorEl, isOpen]);
+
   const validate = () => {
     if (mode === 'signup' && name.trim().length < 2) {
       return 'Please enter your full name.';
@@ -161,7 +187,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
 
   return (
     <div
-      className={`fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-[90] transition-opacity duration-200 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       onMouseDown={(e) => {
@@ -174,7 +200,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full max-w-md rounded-2xl border border-white/30 bg-white/15 p-6 text-white shadow-2xl backdrop-blur-xl transition-all duration-200 ${
+        style={
+          position
+            ? { position: 'fixed', top: `${position.top}px`, left: `${position.left}px`, width: `${position.width}px` }
+            : undefined
+        }
+        className={`w-full max-w-md rounded-2xl border border-gray-200 bg-white/90 p-6 text-gray-900 shadow-2xl backdrop-blur-xl transition-all duration-200 ${
           isVisible ? 'translate-y-0 scale-100' : 'translate-y-2 scale-95'
         }`}
         onMouseDown={(e) => e.stopPropagation()}
@@ -189,7 +220,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-slate-200 transition hover:bg-white/20 hover:text-white"
+            className="rounded-md px-2 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
             aria-label="Close"
           >
             x
@@ -197,12 +228,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
         </div>
 
         {message && (
-          <div className="mb-4 rounded-lg border border-green-200/50 bg-green-500/20 p-3 text-sm text-green-100">
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
             {message}
           </div>
         )}
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200/50 bg-red-500/20 p-3 text-sm text-red-100">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -217,34 +248,34 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
-                className="w-full rounded-lg border border-white/35 bg-white/10 px-3 py-2 text-white placeholder:text-slate-200/75 focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/35"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="Your full name"
               />
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-100">Email</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
             <input
               ref={mode === 'signin' ? firstInputRef : undefined}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              className="w-full rounded-lg border border-white/35 bg-white/10 px-3 py-2 text-white placeholder:text-slate-200/75 focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/35"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               placeholder="name@example.com"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-100">Password</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              className="w-full rounded-lg border border-white/35 bg-white/10 px-3 py-2 text-white placeholder:text-slate-200/75 focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/35"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               placeholder="At least 8 characters"
               required
             />
@@ -252,7 +283,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
 
           {mode === 'signin' && (
             <p className="text-right text-sm">
-              <a href="/forgot-password" className="text-slate-100 underline decoration-slate-200/70 underline-offset-2 hover:text-white">
+              <a href="/forgot-password" className="text-primary underline underline-offset-2 hover:text-purple-700">
                 Forgot Password?
               </a>
             </p>
@@ -268,10 +299,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', o
         </form>
 
         <p className="mt-4 text-center text-sm text-slate-100/95">
+          <span className="text-gray-600">
           {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}{' '}
+          </span>
           <button
             type="button"
-            className="font-semibold text-white underline decoration-slate-200/75 underline-offset-2"
+            className="font-semibold text-primary underline decoration-primary/60 underline-offset-2"
             onClick={() => {
               setMode((prev) => (prev === 'signin' ? 'signup' : 'signin'));
               setError(null);
