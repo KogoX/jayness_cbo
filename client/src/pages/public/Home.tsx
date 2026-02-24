@@ -112,7 +112,68 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. ABOUT US (Static Summary) */}
+      {/* 2. DYNAMIC PROGRAMS (Shows Skeletons while loading) */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Our Core Initiatives</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              We focus on sustainable development through these key pillars.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {loading ? (
+              // Show 3 Fake Cards while loading
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : (
+              // Show Real Data when ready
+              displayedPrograms.map((program) => (
+                <ProgramCard 
+                  key={program._id} 
+                  program={program} 
+                  isPublic={true} 
+                />
+              ))
+            )}
+          </div>
+
+          <div className="text-center mt-12">
+            <Link to="/public/programs" className="inline-flex items-center text-primary font-bold hover:text-purple-800 hover:underline text-lg transition">
+              View All Programs 
+              <span className="ml-2 text-xl">→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. IMPACT STATS (Static - Loads Instantly) */}
+      <section className="py-16 bg-white border-y border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="p-4">
+            <div className="text-4xl font-bold text-secondary mb-2">500+</div>
+            <div className="text-gray-600 font-medium">Families Supported</div>
+          </div>
+          <div className="p-4">
+            <div className="text-4xl font-bold text-secondary mb-2">120</div>
+            <div className="text-gray-600 font-medium">Children Educated</div>
+          </div>
+          <div className="p-4">
+            <div className="text-4xl font-bold text-secondary mb-2">50</div>
+            <div className="text-gray-600 font-medium">Women Empowered</div>
+          </div>
+          <div className="p-4">
+            <div className="text-4xl font-bold text-secondary mb-2">{programs.length || 6}</div>
+            <div className="text-gray-600 font-medium">Active Programs</div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. ABOUT US (Static Summary) */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-14">
@@ -153,67 +214,6 @@ const Home: React.FC = () => {
               Learn More About Us
               <span className="ml-2 text-xl">&rarr;</span>
             </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. DYNAMIC PROGRAMS (Shows Skeletons while loading) */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Our Core Initiatives</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              We focus on sustainable development through these key pillars.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {loading ? (
-              // Show 3 Fake Cards while loading
-              <>
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
-            ) : (
-              // Show Real Data when ready
-              displayedPrograms.map((program) => (
-                <ProgramCard 
-                  key={program._id} 
-                  program={program} 
-                  isPublic={true} 
-                />
-              ))
-            )}
-          </div>
-
-          <div className="text-center mt-12">
-            <Link to="/public/programs" className="inline-flex items-center text-primary font-bold hover:text-purple-800 hover:underline text-lg transition">
-              View All Programs 
-              <span className="ml-2 text-xl">→</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. IMPACT STATS (Static - Loads Instantly) */}
-      <section className="py-16 bg-white border-y border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <div className="p-4">
-            <div className="text-4xl font-bold text-secondary mb-2">500+</div>
-            <div className="text-gray-600 font-medium">Families Supported</div>
-          </div>
-          <div className="p-4">
-            <div className="text-4xl font-bold text-secondary mb-2">120</div>
-            <div className="text-gray-600 font-medium">Children Educated</div>
-          </div>
-          <div className="p-4">
-            <div className="text-4xl font-bold text-secondary mb-2">50</div>
-            <div className="text-gray-600 font-medium">Women Empowered</div>
-          </div>
-          <div className="p-4">
-            <div className="text-4xl font-bold text-secondary mb-2">{programs.length || 6}</div>
-            <div className="text-gray-600 font-medium">Active Programs</div>
           </div>
         </div>
       </section>
