@@ -4,6 +4,7 @@ import apiClient from '../../api/axiosClient';
 import type { Program } from '../../types/program.types';
 import type { CboEvent } from '../../types/event.types';
 import { AUTH_CHANGED_EVENT, notifyAuthChanged } from '../../utils/authEvents';
+import AuthModal from '../common/AuthModal';
 
 interface User {
   name: string;
@@ -14,6 +15,8 @@ interface User {
 
 const PublicNavbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -201,6 +204,28 @@ const PublicNavbar: React.FC = () => {
     setShowResults(false);
     setSearchQuery('');
   };
+
+  const openAuthModal = (mode: 'signin' | 'signup' = 'signin') => {
+    setAuthMode(mode);
+    setIsAuthModalOpen(true);
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const authParam = params.get('auth');
+    if (!user && (authParam === 'signin' || authParam === 'signup')) {
+      openAuthModal(authParam);
+      params.delete('auth');
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString() ? `?${params.toString()}` : '',
+        },
+        { replace: true }
+      );
+    }
+  }, [location.pathname, location.search, navigate, user]);
 
   // Helper function to highlight matching text
   const highlightMatch = (text: string, query: string) => {
@@ -415,9 +440,13 @@ const PublicNavbar: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-3">
-                <Link to="/login" className="text-sm font-semibold text-gray-600 hover:text-primary transition px-2">
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('signin')}
+                  className="text-sm font-semibold text-gray-600 hover:text-primary transition px-2"
+                >
                   Log In
-                </Link>
+                </button>
                 <Link to="/join" className="bg-primary text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-purple-700 transition shadow-md hover:shadow-lg hover:-translate-y-0.5 transform active:scale-95 flex items-center gap-1">
                   <span>Join Us</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
@@ -562,13 +591,30 @@ const PublicNavbar: React.FC = () => {
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition">Log In</Link>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('signin')}
+                  className="w-full text-center py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition"
+                >
+                  Log In
+                </button>
                 <Link to="/join" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-white bg-primary rounded-xl font-bold hover:bg-purple-700 transition shadow-lg">Join Us</Link>
               </>
             )}
           </div>
         </div>
       )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        initialMode={authMode}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => {
+          setIsAuthModalOpen(false);
+          setIsOpen(false);
+          navigate('/dashboard');
+        }}
+      />
     </nav>
   );
 };

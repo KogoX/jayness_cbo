@@ -100,7 +100,7 @@ const Profile: React.FC = () => {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       notifyAuthChanged();
-      window.location.href = '/login';
+      window.location.href = '/?auth=signin';
     }
   };
 
