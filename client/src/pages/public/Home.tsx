@@ -13,6 +13,7 @@ const Home: React.FC = () => {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [events, setEvents] = useState<CboEvent[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [activeVoiceIndex, setActiveVoiceIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Fetch data in background
@@ -59,6 +60,20 @@ const Home: React.FC = () => {
   // Memoize displayed programs and events
   const displayedPrograms = useMemo(() => programs.slice(0, 3), [programs]);
   const displayedTestimonials = useMemo(() => testimonials.slice(0, 3), [testimonials]);
+
+  useEffect(() => {
+    setActiveVoiceIndex(0);
+  }, [displayedTestimonials.length]);
+
+  useEffect(() => {
+    if (displayedTestimonials.length < 2) return;
+
+    const intervalId = setInterval(() => {
+      setActiveVoiceIndex((prev) => (prev + 1) % displayedTestimonials.length);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [displayedTestimonials.length]);
 
   // Skeleton Loader Component (Gray Box Placeholder)
   const SkeletonCard = () => (
@@ -219,7 +234,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* 5. IMPACT STORIES (Dynamic Preview) */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
@@ -231,34 +246,87 @@ const Home: React.FC = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="relative">
             {loading ? (
-              <>
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
+              <SkeletonCard />
             ) : displayedTestimonials.length > 0 ? (
-              displayedTestimonials.map((testimonial) => (
-                <div key={testimonial._id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative">
-                  <div className="absolute -top-3 -left-3 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center text-xl font-serif">"</div>
-                  <p className="text-gray-600 italic mb-4 leading-relaxed text-sm">{testimonial.quote}</p>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={testimonial.image || 'https://via.placeholder.com/100'}
-                      alt={testimonial.name}
-                      className="w-10 h-10 rounded-full object-cover border border-primary"
-                      loading="lazy"
-                    />
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm">{testimonial.name}</h4>
-                      <p className="text-xs text-primary font-bold uppercase tracking-wide">{testimonial.role}</p>
-                    </div>
+              <>
+                <div className="overflow-hidden rounded-3xl border border-gray-200 shadow-xl bg-white">
+                  <div
+                    className="flex transition-transform duration-700 ease-out"
+                    style={{ transform: `translateX(-${activeVoiceIndex * 100}%)` }}
+                  >
+                    {displayedTestimonials.map((testimonial) => (
+                      <article key={testimonial._id} className="min-w-full p-8 md:p-12">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 items-center">
+                          <div className="md:col-span-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-purple-100 text-primary mb-4">
+                              Impact Story
+                            </span>
+                            <p className="text-2xl md:text-3xl text-gray-800 leading-relaxed font-medium">
+                              "{testimonial.quote}"
+                            </p>
+                          </div>
+                          <div className="md:col-span-2 flex md:justify-end">
+                            <div className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3">
+                              <img
+                                src={testimonial.image || 'https://via.placeholder.com/100'}
+                                alt={testimonial.name}
+                                className="w-14 h-14 rounded-full object-cover border-2 border-primary"
+                                loading="lazy"
+                              />
+                              <div>
+                                <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                                <p className="text-xs text-primary font-bold uppercase tracking-wide">{testimonial.role}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 </div>
-              ))
+
+                {displayedTestimonials.length > 1 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        setActiveVoiceIndex((prev) =>
+                          prev === 0 ? displayedTestimonials.length - 1 : prev - 1
+                        )
+                      }
+                      className="absolute top-1/2 -translate-y-1/2 left-3 md:left-4 h-10 w-10 rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:bg-white shadow-md transition"
+                      aria-label="Previous testimonial"
+                    >
+                      &larr;
+                    </button>
+                    <button
+                      onClick={() =>
+                        setActiveVoiceIndex((prev) => (prev + 1) % displayedTestimonials.length)
+                      }
+                      className="absolute top-1/2 -translate-y-1/2 right-3 md:right-4 h-10 w-10 rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:bg-white shadow-md transition"
+                      aria-label="Next testimonial"
+                    >
+                      &rarr;
+                    </button>
+
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                      {displayedTestimonials.map((item, index) => (
+                        <button
+                          key={item._id}
+                          onClick={() => setActiveVoiceIndex(index)}
+                          className={`h-2.5 rounded-full transition-all ${
+                            activeVoiceIndex === index ? 'w-8 bg-primary' : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                          }`}
+                          aria-label={`Go to testimonial ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
             ) : (
-              <p className="md:col-span-3 text-center text-gray-500 py-10 bg-white rounded-xl border border-dashed border-gray-300">
+              <p className="text-center text-gray-500 py-10 bg-white rounded-xl border border-dashed border-gray-300">
                 Impact stories will appear here soon.
               </p>
             )}
