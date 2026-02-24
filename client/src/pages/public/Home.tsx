@@ -5,12 +5,14 @@ import PaymentModal from '../../components/common/PaymentModal';
 import ProgramCard from '../../components/programs/ProgramCard';
 import type { Program } from '../../types/program.types';
 import type { CboEvent } from '../../types/event.types';
+import type { Testimonial } from '../../types/impact.types';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [events, setEvents] = useState<CboEvent[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch data in background
@@ -19,14 +21,24 @@ const Home: React.FC = () => {
     
     const fetchData = async () => {
       try {
-        const [progRes, eventRes] = await Promise.all([
+        const [progRes, eventRes, testimonialRes] = await Promise.allSettled([
           apiClient.get('/programs'),
-          apiClient.get('/events')
+          apiClient.get('/events'),
+          apiClient.get('/impact/testimonials')
         ]);
         
         if (isMounted) {
-          setPrograms(progRes.data);
-          setEvents(eventRes.data.slice(0, 3)); // Only show top 3 events
+          if (progRes.status === 'fulfilled') {
+            setPrograms(progRes.value.data);
+          }
+
+          if (eventRes.status === 'fulfilled') {
+            setEvents(eventRes.value.data.slice(0, 3)); // Only show top 3 events
+          }
+
+          if (testimonialRes.status === 'fulfilled') {
+            setTestimonials(testimonialRes.value.data);
+          }
         }
       } catch (error) {
         console.error("Failed to load home data", error);
@@ -46,6 +58,7 @@ const Home: React.FC = () => {
 
   // Memoize displayed programs and events
   const displayedPrograms = useMemo(() => programs.slice(0, 3), [programs]);
+  const displayedTestimonials = useMemo(() => testimonials.slice(0, 3), [testimonials]);
 
   // Skeleton Loader Component (Gray Box Placeholder)
   const SkeletonCard = () => (
@@ -68,7 +81,7 @@ const Home: React.FC = () => {
       
       {/* 1. HERO SECTION (Loads Instantly) */}
       <section className="relative bg-primary text-white py-24 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2000')] bg-cover bg-center mix-blend-overlay"></div>
+        <div className="absolute inset-0 opacity-80 bg-[url('https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2000')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-secondary rounded-full filter blur-3xl opacity-20 translate-x-1/2 -translate-y-1/2"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
@@ -80,7 +93,7 @@ const Home: React.FC = () => {
             <span className="text-secondary">Transforming Lives</span>
           </h1>
           <p className="text-lg md:text-xl text-purple-100 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Jayness CBO is dedicated to uplifting the vulnerable through education, healthcare, and economic empowerment. Join us in building a resilient future.
+            Jayness Foundation is dedicated to uplifting the vulnerable through education, healthcare, and economic empowerment. Join us in building a resilient future.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button 
@@ -99,7 +112,52 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. DYNAMIC PROGRAMS (Shows Skeletons while loading) */}
+      {/* 2. ABOUT US (Static Summary) */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">About Us</h2>
+            <p className="text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Jayness Community Based Organization empowers vulnerable and marginalized families through education, health, economic support, and advocacy.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-purple-50 border border-purple-100 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Our Vision</h3>
+              <p className="text-gray-700 leading-relaxed">
+                A just, resilient, and inclusive community where every individual can realize their potential and contribute meaningfully to society.
+              </p>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Our Mission</h3>
+              <p className="text-gray-700 leading-relaxed">
+                To deliver life-changing services that build dignity, self-reliance, and equal opportunity for all community members.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-gray-50 border border-gray-100 rounded-2xl p-8">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Core Values</h3>
+            <div className="flex flex-wrap gap-3">
+              {['Integrity', 'Inclusiveness', 'Empowerment', 'Collaboration', 'Accountability'].map((value) => (
+                <span key={value} className="px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700">
+                  {value}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Link to="/about" className="inline-flex items-center text-primary font-bold hover:text-purple-800 hover:underline text-lg transition">
+              Learn More About Us
+              <span className="ml-2 text-xl">&rarr;</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. DYNAMIC PROGRAMS (Shows Skeletons while loading) */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
@@ -138,7 +196,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. IMPACT STATS (Static - Loads Instantly) */}
+      {/* 4. IMPACT STATS (Static - Loads Instantly) */}
       <section className="py-16 bg-white border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div className="p-4">
@@ -160,7 +218,55 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. UPCOMING EVENTS (Shows Skeletons while loading) */}
+      {/* 5. IMPACT STORIES (Dynamic Preview) */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-800">Community Voices</h2>
+              <p className="text-gray-500 mt-2">Direct stories from people impacted by our programs.</p>
+            </div>
+            <Link to="/impact" className="text-primary font-bold hover:underline">
+              View Full Impact &rarr;
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {loading ? (
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : displayedTestimonials.length > 0 ? (
+              displayedTestimonials.map((testimonial) => (
+                <div key={testimonial._id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative">
+                  <div className="absolute -top-3 -left-3 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center text-xl font-serif">"</div>
+                  <p className="text-gray-600 italic mb-4 leading-relaxed text-sm">{testimonial.quote}</p>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={testimonial.image || 'https://via.placeholder.com/100'}
+                      alt={testimonial.name}
+                      className="w-10 h-10 rounded-full object-cover border border-primary"
+                      loading="lazy"
+                    />
+                    <div>
+                      <h4 className="font-bold text-gray-900 text-sm">{testimonial.name}</h4>
+                      <p className="text-xs text-primary font-bold uppercase tracking-wide">{testimonial.role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="md:col-span-3 text-center text-gray-500 py-10 bg-white rounded-xl border border-dashed border-gray-300">
+                Impact stories will appear here soon.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. UPCOMING EVENTS (Shows Skeletons while loading) */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
@@ -227,7 +333,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. CALL TO ACTION (Loads Instantly) */}
+      {/* 7. CALL TO ACTION (Loads Instantly) */}
       <section className="bg-primary py-24 text-white text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         <div className="relative max-w-4xl mx-auto px-4 z-10">
