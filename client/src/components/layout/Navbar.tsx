@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosClient';
+import { notifyAuthChanged } from '../../utils/authEvents';
 
 interface NavbarProps {
   user: { name: string; email: string; image?: string } | null;
@@ -20,6 +21,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onMenuClick }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const getImageUrl = (path?: string) => {
     if (!path) return undefined;
@@ -51,10 +55,21 @@ const Navbar: React.FC<NavbarProps> = ({ user, onMenuClick }) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    notifyAuthChanged();
+    setShowProfileMenu(false);
+    navigate('/?auth=signin');
+  };
 
   const handleMarkRead = async (id: string) => {
     try {
@@ -159,33 +174,55 @@ const Navbar: React.FC<NavbarProps> = ({ user, onMenuClick }) => {
             )}
           </div>
 
-          {/* USER PROFILE LINK */}
-          <Link 
-            to="/dashboard/profile" 
-            className="flex items-center gap-3 hover:bg-gray-50 p-1.5 pr-3 rounded-full border border-transparent hover:border-gray-100 transition group"
-          >
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-sm font-bold text-gray-700 group-hover:text-primary transition">
-                {user?.name || 'Member'}
-              </span>
-              <span className="text-xs text-gray-500">View Profile</span>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold shadow-sm overflow-hidden border border-gray-100">
-              {user?.image ? (
-                <img 
-                  src={getImageUrl(user.image)} 
-                  alt={user.name} 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerText = user.name.charAt(0);
-                  }}
-                />
-              ) : (
-                <span className="text-lg">{user?.name?.charAt(0) || 'U'}</span>
-              )}
-            </div>
-          </Link>
+          {/* USER PROFILE MENU */}
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu((prev) => !prev)}
+              className="flex items-center gap-3 hover:bg-gray-50 p-1.5 pr-3 rounded-full border border-transparent hover:border-gray-100 transition group"
+            >
+              <div className="hidden md:flex flex-col items-end">
+                <span className="text-sm font-bold text-gray-700 group-hover:text-primary transition">
+                  {user?.name || 'Member'}
+                </span>
+                <span className="text-xs text-gray-500">Account</span>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold shadow-sm overflow-hidden border border-gray-100">
+                {user?.image ? (
+                  <img
+                    src={getImageUrl(user.image)}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerText = user.name.charAt(0);
+                    }}
+                  />
+                ) : (
+                  <span className="text-lg">{user?.name?.charAt(0) || 'U'}</span>
+                )}
+              </div>
+            </button>
+
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden z-50">
+                <Link
+                  to="/dashboard/profile"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Update Profile
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="block w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

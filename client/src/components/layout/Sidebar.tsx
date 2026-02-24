@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, user }) => {
       `}
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h1 className="text-2xl font-bold text-primary">Jayness CBO</h1>
+          <img src="/logo.svg" alt="Jayness Logo" className="h-10 w-auto" />
           <button onClick={onClose} className="lg:hidden text-gray-500 hover:text-red-500" aria-label="Close menu">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
