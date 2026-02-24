@@ -18,6 +18,7 @@ const PublicNavbar: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authAnchorEl, setAuthAnchorEl] = useState<HTMLElement | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -33,6 +34,7 @@ const PublicNavbar: React.FC = () => {
   const [hasLoadedSearchData, setHasLoadedSearchData] = useState(false);
   
   const searchRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const desktopLoginButtonRef = useRef<HTMLButtonElement>(null);
   const mobileLoginButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -107,6 +109,9 @@ const PublicNavbar: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -193,6 +198,7 @@ const PublicNavbar: React.FC = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     notifyAuthChanged();
+    setShowProfileMenu(false);
     setUser(null);
     navigate('/');
     setIsOpen(false);
@@ -425,25 +431,41 @@ const PublicNavbar: React.FC = () => {
                 >
                   Dashboard
                 </Link>
-                <Link 
-                  to="/dashboard/profile" 
-                  className="flex items-center gap-2 hover:bg-gray-50 p-1.5 pr-3 rounded-full border border-transparent hover:border-gray-100 transition"
-                >
-                  <div className="h-8 w-8 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-xs shadow-sm overflow-hidden border border-gray-100">
-                    {user.image ? (
-                      <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span>{user.name?.charAt(0) || 'U'}</span>
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 hidden md:block">{user.name}</span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm font-semibold text-gray-600 hover:text-red-600 transition px-2"
-                >
-                  Logout
-                </button>
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileMenu((prev) => !prev)}
+                    className="flex items-center gap-2 hover:bg-gray-50 p-1.5 pr-3 rounded-full border border-transparent hover:border-gray-100 transition"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-xs shadow-sm overflow-hidden border border-gray-100">
+                      {user.image ? (
+                        <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{user.name?.charAt(0) || 'U'}</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 hidden md:block">{user.name}</span>
+                  </button>
+
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden z-50">
+                      <Link
+                        to="/dashboard/profile"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        Update Profile
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="block w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-3">
@@ -585,14 +607,14 @@ const PublicNavbar: React.FC = () => {
                   Dashboard
                 </Link>
                 <Link to="/dashboard/profile" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-primary bg-purple-50 rounded-xl font-bold hover:bg-purple-100 transition">
-                  {user.name}
+                  Update Profile
                 </Link>
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsOpen(false);
                   }}
-                  className="w-full text-center py-3 text-white bg-red-600 rounded-xl font-bold hover:bg-red-700 transition"
+                  className="w-full text-center py-3 text-red-600 bg-red-50 rounded-xl font-bold hover:bg-red-100 transition"
                 >
                   Logout
                 </button>

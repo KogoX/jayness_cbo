@@ -95,15 +95,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to log out?')) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      notifyAuthChanged();
-      window.location.href = '/?auth=signin';
-    }
-  };
-
   const getImageUrl = (path: string) => {
     if (!path) return `https://ui-avatars.com/api/?name=${name}&background=6B21A8&color=fff`;
     if (path.startsWith('http')) return path;
@@ -253,13 +244,6 @@ const Profile: React.FC = () => {
               className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition shadow-md disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button 
-              type="button" 
-              onClick={handleLogout}
-              className="flex-none px-6 py-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition"
-            >
-              Log Out
             </button>
           </div>
         </form>
