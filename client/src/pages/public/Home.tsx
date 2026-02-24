@@ -234,7 +234,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* 5. IMPACT STORIES (Dynamic Preview) */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
@@ -251,32 +251,32 @@ const Home: React.FC = () => {
               <SkeletonCard />
             ) : displayedTestimonials.length > 0 ? (
               <>
-                <div className="overflow-hidden rounded-3xl border border-gray-200 shadow-xl bg-white">
+                <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm bg-white">
                   <div
                     className="flex transition-transform duration-700 ease-out"
                     style={{ transform: `translateX(-${activeVoiceIndex * 100}%)` }}
                   >
                     {displayedTestimonials.map((testimonial) => (
-                      <article key={testimonial._id} className="min-w-full p-8 md:p-12">
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 items-center">
+                      <article key={testimonial._id} className="min-w-full p-5 md:p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-5 items-center">
                           <div className="md:col-span-3">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-purple-100 text-primary mb-4">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-purple-100 text-primary mb-3">
                               Impact Story
                             </span>
-                            <p className="text-2xl md:text-3xl text-gray-800 leading-relaxed font-medium">
+                            <p className="text-base md:text-lg text-gray-800 leading-relaxed font-medium min-h-[5rem] line-clamp-4">
                               "{testimonial.quote}"
                             </p>
                           </div>
                           <div className="md:col-span-2 flex md:justify-end">
-                            <div className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3">
+                            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
                               <img
                                 src={testimonial.image || 'https://via.placeholder.com/100'}
                                 alt={testimonial.name}
-                                className="w-14 h-14 rounded-full object-cover border-2 border-primary"
+                                className="w-10 h-10 rounded-full object-cover border border-primary"
                                 loading="lazy"
                               />
                               <div>
-                                <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                                <h4 className="font-bold text-sm text-gray-900">{testimonial.name}</h4>
                                 <p className="text-xs text-primary font-bold uppercase tracking-wide">{testimonial.role}</p>
                               </div>
                             </div>
@@ -295,7 +295,7 @@ const Home: React.FC = () => {
                           prev === 0 ? displayedTestimonials.length - 1 : prev - 1
                         )
                       }
-                      className="absolute top-1/2 -translate-y-1/2 left-3 md:left-4 h-10 w-10 rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:bg-white shadow-md transition"
+                      className="absolute top-1/2 -translate-y-1/2 left-3 md:left-4 h-9 w-9 rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:bg-white shadow-sm transition"
                       aria-label="Previous testimonial"
                     >
                       &larr;
@@ -304,7 +304,7 @@ const Home: React.FC = () => {
                       onClick={() =>
                         setActiveVoiceIndex((prev) => (prev + 1) % displayedTestimonials.length)
                       }
-                      className="absolute top-1/2 -translate-y-1/2 right-3 md:right-4 h-10 w-10 rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:bg-white shadow-md transition"
+                      className="absolute top-1/2 -translate-y-1/2 right-3 md:right-4 h-9 w-9 rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:bg-white shadow-sm transition"
                       aria-label="Next testimonial"
                     >
                       &rarr;
