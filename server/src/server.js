@@ -15,13 +15,38 @@ connectDB();
 const app = express();
 
 // Middleware
+const normalizeOrigin = (origin) => String(origin || '').replace(/\/+$/, '');
+const configuredFrontendOrigin = normalizeOrigin(
+  process.env.CLIENT_URL || process.env.FRONTEND_URL || ''
+);
+
+const allowedOrigins = new Set([
+  'http://localhost:5173',            // Local Development
+  'http://localhost:5000',            // Local Server
+  'https://jayness-cbo.vercel.app',   // Production Frontend
+]);
+
+if (configuredFrontendOrigin) {
+  allowedOrigins.add(configuredFrontendOrigin);
+}
+
 const corsOptions = {
-  origin: [
-    'http://localhost:5173',            // Local Development
-    'http://localhost:5000',            // Local Server
-    'https://jayness-cbo.vercel.app'    // Production Frontend (NO trailing slash!)
-  ],
-  credentials: true, // Allow cookies to be sent with requests
+  origin: (origin, callback) => {
+    // Allow non-browser clients/tools without Origin header.
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    const isVercelPreview = /^https:\/\/jayness-cbo.*\.vercel\.app$/i.test(normalizedOrigin);
+
+    if (allowedOrigins.has(normalizedOrigin) || isVercelPreview) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
