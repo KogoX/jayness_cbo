@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "verify:legacy:dry-run": "node scripts/markLegacyUsersVerified.js",
+    "verify:legacy:apply": "node scripts/markLegacyUsersVerified.js --apply"
   },
   "keywords": [],
   "author": "",

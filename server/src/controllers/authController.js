@@ -40,6 +40,14 @@ const sendVerificationEmail = async (user, rawToken) => {
   });
 };
 
+const shouldRequireEmailVerification = (user) => {
+  return Boolean(
+    user &&
+    user.isEmailVerified === false &&
+    user.emailVerificationToken
+  );
+};
+
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -109,8 +117,8 @@ const loginUser = async (req, res) => {
     // 1. Check for user email
     const user = await User.findOne({ email: normalizedEmail });
 
-    // Backward compatible: legacy users may not have this field.
-    if (user && user.isEmailVerified === false) {
+    // Only enforce verification for accounts currently in verification flow.
+    if (shouldRequireEmailVerification(user)) {
       return res.status(403).json({
         message: 'Please verify your email before signing in.',
         needsEmailVerification: true,
@@ -163,7 +171,7 @@ const forgotPassword = async (req, res) => {
     await user.save();
 
     // 4. Create Reset URL (Frontend URL)
-    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    const resetUrl = `${getFrontendBaseUrl()}/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) has requested the reset of a password. \n\n Please click on the following link to reset your password: \n\n ${resetUrl}`;
 
