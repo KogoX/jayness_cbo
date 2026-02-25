@@ -171,15 +171,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', a
         onSuccess?.();
         onClose();
       } else {
-        await apiClient.post('/auth/register', {
+        const response = await apiClient.post('/auth/register', {
           name: name.trim(),
           email: email.trim(),
           password,
         });
-        setVerificationEmail(email.trim().toLowerCase());
-        setMessage('Account created. Check your email to verify your account, then sign in.');
-        setPassword('');
-        setMode('signin');
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data));
+        notifyAuthChanged();
+        onSuccess?.();
+        onClose();
       }
     } catch (err: any) {
       const apiError = err.response?.data;

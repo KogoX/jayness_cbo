@@ -107,6 +107,7 @@ const registerUser = async (req, res) => {
         email: user.email,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        token: generateToken(user.id),
         message: 'Account created. Please check your email to verify your account.',
       });
     }
