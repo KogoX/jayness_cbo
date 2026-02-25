@@ -12,11 +12,21 @@ const generateToken = (id) => {
 };
 
 const getFrontendBaseUrl = () => {
-  return (
+  const configuredUrl =
     process.env.CLIENT_URL ||
     process.env.FRONTEND_URL ||
-    'http://localhost:5173'
-  );
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, '');
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://jayness-cbo.vercel.app';
+  }
+
+  return 'http://localhost:5173';
 };
 
 const generateEmailVerificationToken = (user) => {
