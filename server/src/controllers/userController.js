@@ -17,6 +17,7 @@ const authUser = async (req, res) => {
         phone: user.phone || '',
         image: user.image || '',
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
         token: generateToken(user._id),
       });
     } else {
@@ -69,6 +70,7 @@ const getUserProfile = async (req, res) => {
         phone: user.phone,
         image: user.image,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -112,6 +114,7 @@ const updateUserProfile = async (req, res) => {
         phone: updatedUser.phone,
         image: updatedUser.image,
         role: updatedUser.role,
+        isEmailVerified: updatedUser.isEmailVerified,
         token: generateToken(updatedUser._id),
       });
     } else {

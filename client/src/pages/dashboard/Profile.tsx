@@ -7,11 +7,16 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [emailVerificationMessage, setEmailVerificationMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [image, setImage] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   
   const [oldPassword, setOldPassword] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +30,7 @@ const Profile: React.FC = () => {
       setEmail(user.email || '');
       setPhone(user.phone || '');
       setImage(user.image || '');
+      setIsEmailVerified(Boolean(user.isEmailVerified));
     }
   }, []);
 
@@ -95,6 +101,46 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleSendEmailOtp = async () => {
+    setEmailVerificationMessage(null);
+    setSendingOtp(true);
+    try {
+      const { data } = await apiClient.post('/auth/email-otp');
+      setEmailVerificationMessage({ type: 'success', text: data?.message || 'Verification code sent.' });
+    } catch (err: any) {
+      setEmailVerificationMessage({ type: 'error', text: err.response?.data?.message || 'Could not send verification code.' });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp.trim()) {
+      setEmailVerificationMessage({ type: 'error', text: 'Please enter the verification code.' });
+      return;
+    }
+
+    setEmailVerificationMessage(null);
+    setVerifyingOtp(true);
+    try {
+      const { data } = await apiClient.post('/auth/email-otp/verify', { otp: emailOtp.trim() });
+      if (data?.user?.isEmailVerified) {
+        const storedUser = localStorage.getItem('user');
+        const parsedUser = storedUser ? JSON.parse(storedUser) : {};
+        const updatedUser = { ...parsedUser, ...data.user, isEmailVerified: true };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        notifyAuthChanged();
+        setIsEmailVerified(true);
+        setEmailOtp('');
+      }
+      setEmailVerificationMessage({ type: 'success', text: data?.message || 'Email verified successfully.' });
+    } catch (err: any) {
+      setEmailVerificationMessage({ type: 'error', text: err.response?.data?.message || 'Verification failed.' });
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const getImageUrl = (path: string) => {
     if (!path) return `https://ui-avatars.com/api/?name=${name}&background=6B21A8&color=fff`;
     if (path.startsWith('http')) return path;
@@ -110,6 +156,13 @@ const Profile: React.FC = () => {
           message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
         }`}>
           {message.text}
+        </div>
+      )}
+      {emailVerificationMessage && (
+        <div className={`p-4 rounded-lg text-sm font-medium ${
+          emailVerificationMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+        }`}>
+          {emailVerificationMessage.text}
         </div>
       )}
 
@@ -198,6 +251,48 @@ const Profile: React.FC = () => {
             </div>
             
             {/* Removed the manual File Input here since it is now handled by clicking the image */}
+          </div>
+
+          <div className="border-t border-gray-100 pt-6">
+            <h4 className="text-lg font-bold text-gray-800 mb-4">Email Verification</h4>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`text-sm font-semibold ${isEmailVerified ? 'text-green-700' : 'text-amber-700'}`}>
+                  {isEmailVerified ? 'Verified' : 'Not verified'}
+                </span>
+                {!isEmailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={sendingOtp}
+                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    {sendingOtp ? 'Sending...' : 'Send verification code'}
+                  </button>
+                )}
+              </div>
+
+              {!isEmailVerified && (
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Enter 6-digit code"
+                    value={emailOtp}
+                    onChange={(e) => setEmailOtp(e.target.value)}
+                    className="w-full md:max-w-xs border p-2 rounded focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyEmailOtp}
+                    disabled={verifyingOtp}
+                    className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-purple-700 transition disabled:opacity-60"
+                  >
+                    {verifyingOtp ? 'Verifying...' : 'Verify email'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="border-t border-gray-100 pt-6">

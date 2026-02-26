@@ -120,6 +120,7 @@ const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
         token: generateToken(user.id),
       });
     } else {
