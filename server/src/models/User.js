@@ -38,6 +38,12 @@ const userSchema = new mongoose.Schema({
   emailVerificationExpire: {
     type: Date,
   },
+  emailOtpHash: {
+    type: String,
+  },
+  emailOtpExpire: {
+    type: Date,
+  },
   resetPasswordToken: {
     type: String,
   },

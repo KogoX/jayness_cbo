@@ -26,7 +26,7 @@ const getFrontendBaseUrl = () => {
     return 'https://jayness-cbo.vercel.app';
   }
 
-  return 'http://localhost:5173';
+  return 'https://jayness-cbo.vercel.app';
 };
 
 const generateEmailVerificationToken = (user) => {
@@ -50,12 +50,11 @@ const sendVerificationEmail = async (user, rawToken) => {
   });
 };
 
-const shouldRequireEmailVerification = (user) => {
-  return Boolean(
-    user &&
-    user.isEmailVerified === false &&
-    user.emailVerificationToken
-  );
+const generateEmailOtp = (user) => {
+  const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
+  user.emailOtpHash = crypto.createHash('sha256').update(otp).digest('hex');
+  user.emailOtpExpire = Date.now() + 10 * 60 * 1000;
+  return otp;
 };
 
 // @desc    Register new user
@@ -85,21 +84,7 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Invalid user data' });
     }
 
-    const rawVerificationToken = generateEmailVerificationToken(user);
-    await user.save();
-
-    try {
-      await sendVerificationEmail(user, rawVerificationToken);
-    } catch (emailError) {
-      user.emailVerificationToken = undefined;
-      user.emailVerificationExpire = undefined;
-      await user.save();
-      return res.status(500).json({
-        message: 'Account created but verification email could not be sent. Please try again.',
-      });
-    }
-
-    // 4. Send back user info without authentication token until verification
+    // 4. Send back user info and authenticate immediately
     if (user) {
       res.status(201).json({
         _id: user.id,
@@ -108,7 +93,7 @@ const registerUser = async (req, res) => {
         role: user.role,
         isEmailVerified: user.isEmailVerified,
         token: generateToken(user.id),
-        message: 'Account created. Please check your email to verify your account.',
+        message: 'Account created successfully.',
       });
     }
   } catch (error) {
@@ -127,15 +112,6 @@ const loginUser = async (req, res) => {
 
     // 1. Check for user email
     const user = await User.findOne({ email: normalizedEmail });
-
-    // Only enforce verification for accounts currently in verification flow.
-    if (shouldRequireEmailVerification(user)) {
-      return res.status(403).json({
-        message: 'Please verify your email before signing in.',
-        needsEmailVerification: true,
-        email: user.email,
-      });
-    }
 
     // 2. Check if password matches
     if (user && (await bcrypt.compare(password, user.password))) {
@@ -303,6 +279,96 @@ const resendVerificationEmail = async (req, res) => {
   }
 };
 
+// @desc    Send email OTP for verification (logged-in user)
+// @route   POST /api/auth/email-otp
+// @access  Private
+const sendEmailOtp = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(200).json({ message: 'Email is already verified.' });
+    }
+
+    const otp = generateEmailOtp(user);
+    await user.save();
+
+    const message = `Your Jayness CBO verification code is: ${otp}\n\nThis code expires in 10 minutes.`;
+    await sendEmail({
+      email: user.email,
+      subject: 'Jayness CBO email verification code',
+      message,
+    });
+
+    return res.status(200).json({ message: 'Verification code sent.' });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Verify email OTP (logged-in user)
+// @route   POST /api/auth/email-otp/verify
+// @access  Private
+const verifyEmailOtp = async (req, res) => {
+  const { otp } = req.body;
+
+  if (!otp) {
+    return res.status(400).json({ message: 'OTP is required.' });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(200).json({
+        message: 'Email is already verified.',
+        user: {
+          _id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+        },
+      });
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
+    const isValid =
+      user.emailOtpHash &&
+      user.emailOtpExpire &&
+      user.emailOtpExpire > Date.now() &&
+      user.emailOtpHash === hashedOtp;
+
+    if (!isValid) {
+      return res.status(400).json({ message: 'Invalid or expired code.' });
+    }
+
+    user.isEmailVerified = true;
+    user.emailOtpHash = undefined;
+    user.emailOtpExpire = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      message: 'Email verified successfully.',
+      user: {
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -310,4 +376,6 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendVerificationEmail,
+  sendEmailOtp,
+  verifyEmailOtp,
 };

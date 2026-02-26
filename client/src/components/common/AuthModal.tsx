@@ -25,13 +25,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', a
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendingVerification, setResendingVerification] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [verificationEmail, setVerificationEmail] = useState('');
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
+  const successTimerRef = useRef<number | null>(null);
 
   const title = useMemo(() => (mode === 'signin' ? 'Welcome Back' : 'Create Your Account'), [mode]);
 
@@ -47,8 +46,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', a
       setPassword('');
       setError(null);
       setMessage(null);
-      setVerificationEmail('');
-      setResendingVerification(false);
+      if (successTimerRef.current) {
+        window.clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
 
       const raf = window.requestAnimationFrame(() => setIsVisible(true));
       return () => window.cancelAnimationFrame(raf);
@@ -179,39 +180,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', a
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data));
         notifyAuthChanged();
-        onSuccess?.();
-        onClose();
+        setMessage('Account created successfully. You are now signed in.');
+        successTimerRef.current = window.setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 1500);
       }
     } catch (err: any) {
       const apiError = err.response?.data;
-      if (apiError?.needsEmailVerification) {
-        setVerificationEmail(apiError.email || email.trim().toLowerCase());
-      }
       setError(apiError?.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!verificationEmail) {
-      setError('Please enter your email first.');
-      return;
-    }
-
-    setResendingVerification(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const response = await apiClient.post('/auth/resend-verification', {
-        email: verificationEmail,
-      });
-      setMessage(response.data?.message || 'Verification email sent. Check your inbox.');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not resend verification email.');
-    } finally {
-      setResendingVerification(false);
     }
   };
 
@@ -269,21 +248,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', a
             {error}
           </div>
         )}
-        {verificationEmail && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            <p className="mb-2">
-              Verification pending for <span className="font-semibold">{verificationEmail}</span>.
-            </p>
-            <button
-              type="button"
-              onClick={handleResendVerification}
-              disabled={resendingVerification}
-              className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {resendingVerification ? 'Sending...' : 'Resend verification email'}
-            </button>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
@@ -308,11 +272,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, initialMode = 'signin', a
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onBlur={(e) => {
-                if (mode === 'signin' && e.target.value.trim()) {
-                  setVerificationEmail(e.target.value.trim().toLowerCase());
-                }
-              }}
               autoComplete="email"
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               placeholder="name@example.com"
