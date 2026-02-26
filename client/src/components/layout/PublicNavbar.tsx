@@ -19,6 +19,8 @@ const PublicNavbar: React.FC = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authAnchorEl, setAuthAnchorEl] = useState<HTMLElement | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -502,23 +504,70 @@ const PublicNavbar: React.FC = () => {
 
       {/* MOBILE MENU DROPDOWN */}
       {isOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-100 py-4 shadow-xl animate-fade-in-down absolute w-full left-0 z-50">
+        <div className="lg:hidden bg-slate-950/95 border-t border-slate-800/40 py-4 shadow-2xl animate-fade-in-down absolute w-full left-0 z-50 backdrop-blur-xl">
           
+          {/* Mobile Action Row */}
+          <div className="px-4 mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowMobileSearch((prev) => !prev)}
+                className="h-11 w-11 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 flex items-center justify-center transition hover:border-cyan-400/70 hover:text-cyan-300"
+                aria-label="Toggle search"
+              >
+                {showMobileSearch ? (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className={`h-5 w-5 ${isMobileSearchFocused ? 'text-cyan-300' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (user) {
+                    navigate('/dashboard/profile');
+                  } else {
+                    openAuthModal('signin', mobileLoginButtonRef.current);
+                  }
+                  setIsOpen(false);
+                }}
+                className="h-11 w-11 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 flex items-center justify-center transition hover:border-cyan-400/70 hover:text-cyan-300"
+                aria-label="Profile"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-400">
+              {user ? `Hi, ${user.name?.split(' ')[0] || 'Member'}` : 'Welcome'}
+            </div>
+          </div>
+
           {/* Mobile Search */}
+          {showMobileSearch && (
           <div className="px-4 mb-4">
             <div className="relative">
               <input 
                 type="text"
                 placeholder="Search programs, events..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:border-primary focus:bg-white transition"
+                className="w-full bg-slate-900/70 border border-slate-700/70 rounded-xl py-3 pl-11 pr-4 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition"
                 value={searchQuery}
                 onChange={(e) => {
                   const value = e.target.value;
                   setSearchQuery(value);
                 }}
+                onFocus={() => setIsMobileSearchFocused(true)}
+                onBlur={() => setIsMobileSearchFocused(false)}
               />
-              <span className="absolute left-3 top-3.5 text-gray-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="absolute left-3.5 top-3.5 text-slate-400">
+                <svg className={`w-5 h-5 ${isMobileSearchFocused ? 'text-cyan-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </span>
@@ -526,13 +575,13 @@ const PublicNavbar: React.FC = () => {
             
             {/* Mobile Results */}
             {searchQuery.length >= 2 && (
-              <div className="mt-2 bg-white border border-gray-100 rounded-lg shadow-inner max-h-96 overflow-y-auto">
+              <div className="mt-3 bg-slate-950/90 border border-slate-800/70 rounded-xl shadow-inner max-h-96 overflow-y-auto">
                 {searchLoading ? (
-                  <div className="p-4 text-center text-sm text-gray-500">Loading...</div>
+                  <div className="p-4 text-center text-sm text-slate-400">Loading...</div>
                 ) : (
                   <>
                     {filteredPrograms.length > 0 && (
-                      <div className="sticky top-0 bg-gray-50 px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b">
+                      <div className="sticky top-0 bg-slate-900/80 px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/70">
                         Programs ({filteredPrograms.length})
                       </div>
                     )}
@@ -544,19 +593,19 @@ const PublicNavbar: React.FC = () => {
                           setIsOpen(false);
                           setSearchQuery('');
                         }} 
-                        className="p-3 border-b border-gray-50 text-sm text-gray-700 active:bg-purple-50 flex items-start gap-3"
+                        className="p-3 border-b border-slate-800/60 text-sm text-slate-200 active:bg-slate-800/60 flex items-start gap-3"
                       >
-                        <span className="text-primary shrink-0 mt-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg></span>
+                        <span className="text-cyan-300 shrink-0 mt-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg></span>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-800">{highlightMatch(p.title, searchQuery)}</div>
+                          <div className="font-medium text-slate-100">{highlightMatch(p.title, searchQuery)}</div>
                           {p.description && (
-                            <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{p.description.substring(0, 50)}...</div>
+                            <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{p.description.substring(0, 50)}...</div>
                           )}
                         </div>
                       </div>
                     ))}
                     {filteredEvents.length > 0 && (
-                      <div className="sticky top-0 bg-gray-50 px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-t">
+                      <div className="sticky top-0 bg-slate-900/80 px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/70 border-t">
                         Events ({filteredEvents.length})
                       </div>
                     )}
@@ -568,20 +617,20 @@ const PublicNavbar: React.FC = () => {
                           setIsOpen(false);
                           setSearchQuery('');
                         }} 
-                        className="p-3 border-b border-gray-50 text-sm text-gray-700 active:bg-purple-50 flex items-start gap-3"
+                        className="p-3 border-b border-slate-800/60 text-sm text-slate-200 active:bg-slate-800/60 flex items-start gap-3"
                       >
-                        <span className="text-primary shrink-0 mt-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" /></svg></span>
+                        <span className="text-cyan-300 shrink-0 mt-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" /></svg></span>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-800">{highlightMatch(e.title, searchQuery)}</div>
-                          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                          <div className="font-medium text-slate-100">{highlightMatch(e.title, searchQuery)}</div>
+                          <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
                             {e.location && <span>{e.location}</span>}
-                            {e.category && <span className="text-primary">• {e.category}</span>}
+                            {e.category && <span className="text-cyan-300">- {e.category}</span>}
                           </div>
                         </div>
                       </div>
                     ))}
                     {!hasResults && searchQuery.length >= 2 && (
-                      <div className="p-4 text-center text-sm text-gray-500 italic">
+                      <div className="p-4 text-center text-sm text-slate-400 italic">
                         No results found for "{searchQuery}"
                       </div>
                     )}
@@ -590,31 +639,52 @@ const PublicNavbar: React.FC = () => {
               </div>
             )}
           </div>
+          )}
 
-          <div className="space-y-1 px-2">
-            <Link to="/" onClick={() => setIsOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-primary font-medium">Home</Link>
-            <Link to="/about" onClick={() => setIsOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-primary font-medium">About Us</Link>
-            <Link to="/public/programs" onClick={() => setIsOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-primary font-medium">Programs</Link>
-            <Link to="/public/events" onClick={() => setIsOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-primary font-medium">Events</Link>
-            <Link to="/impact" onClick={() => setIsOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-primary font-medium">Impact</Link>
-            <Link to="/contact" onClick={() => setIsOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-primary font-medium">Contact</Link>
+          <div className="px-3">
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 whitespace-nowrap hover:border-cyan-400/70 hover:text-cyan-300 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1V10z" /></svg>
+                Home
+              </Link>
+              <Link to="/about" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 whitespace-nowrap hover:border-cyan-400/70 hover:text-cyan-300 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 11h8M8 15h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                About
+              </Link>
+              <Link to="/public/programs" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 whitespace-nowrap hover:border-cyan-400/70 hover:text-cyan-300 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h6l2 2h8a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" /></svg>
+                Programs
+              </Link>
+              <Link to="/public/events" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 whitespace-nowrap hover:border-cyan-400/70 hover:text-cyan-300 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" /></svg>
+                Events
+              </Link>
+              <Link to="/impact" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 whitespace-nowrap hover:border-cyan-400/70 hover:text-cyan-300 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m9-9H3" /></svg>
+                Impact
+              </Link>
+              <Link to="/contact" onClick={() => setIsOpen(false)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/70 bg-slate-900/70 text-slate-100 whitespace-nowrap hover:border-cyan-400/70 hover:text-cyan-300 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 8V7a2 2 0 00-2-2H5a2 2 0 00-2 2v1m18 0v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0l-9 6-9-6" /></svg>
+                Contact
+              </Link>
+            </div>
           </div>
           
-          <div className="border-t border-gray-100 mt-4 pt-4 px-4 flex flex-col gap-3">
+          <div className="border-t border-slate-800/70 mt-4 pt-4 px-4 flex flex-col gap-3">
             {user ? (
               <>
-                <Link to="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition">
+                <Link to="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-slate-100 bg-slate-900/70 rounded-xl font-bold hover:bg-slate-800 transition">
                   Dashboard
                 </Link>
-                <Link to="/dashboard/profile" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-primary bg-purple-50 rounded-xl font-bold hover:bg-purple-100 transition">
-                  Update Profile
+                <Link to="/dashboard/profile" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-cyan-200 bg-cyan-500/10 rounded-xl font-bold hover:bg-cyan-500/20 transition">
+                  Profile
                 </Link>
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsOpen(false);
                   }}
-                  className="w-full text-center py-3 text-red-600 bg-red-50 rounded-xl font-bold hover:bg-red-100 transition"
+                  className="w-full text-center py-3 text-red-200 bg-red-500/10 rounded-xl font-bold hover:bg-red-500/20 transition"
                 >
                   Logout
                 </button>
@@ -625,11 +695,11 @@ const PublicNavbar: React.FC = () => {
                   ref={mobileLoginButtonRef}
                   type="button"
                   onClick={() => openAuthModal('signin', mobileLoginButtonRef.current)}
-                  className="w-full text-center py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition"
+                  className="w-full text-center py-3 text-slate-100 bg-slate-900/70 rounded-xl font-bold hover:bg-slate-800 transition"
                 >
                   Log In
                 </button>
-                <Link to="/join" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-white bg-primary rounded-xl font-bold hover:bg-purple-700 transition shadow-lg">Join Us</Link>
+                <Link to="/join" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-white bg-cyan-500 rounded-xl font-bold hover:bg-cyan-400 transition shadow-lg">Join Us</Link>
               </>
             )}
           </div>
