@@ -350,47 +350,6 @@ const AdminDashboard: React.FC = () => {
         </div>
       </section>
 
-      <section className="rounded-xl bg-white border border-gray-100 p-6 shadow-sm">
-        <h3 className="font-semibold text-gray-900 mb-4">Quick actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          <button
-            onClick={() => navigate('/admin/events')}
-            className="rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Manage Events
-          </button>
-          <button
-            onClick={() => navigate('/admin/programs')}
-            className="rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Manage Programs
-          </button>
-          <button
-            onClick={() => navigate('/admin/users')}
-            className="rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Manage Users
-          </button>
-          <button
-            onClick={() => navigate('/admin/beneficiaries')}
-            className="rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Manage Beneficiaries
-          </button>
-          <button
-            onClick={() => navigate('/admin/notifications')}
-            className="rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Send Broadcast
-          </button>
-          <button
-            onClick={() => navigate('/admin/impact')}
-            className="rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Update Impact Gallery
-          </button>
-        </div>
-      </section>
     </div>
   );
 };
