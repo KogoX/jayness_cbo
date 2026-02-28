@@ -52,7 +52,7 @@ const MainLayout: React.FC = () => {
         </main>
 
         {/* 4. CONSTANT FOOTER */}
-        <Footer />
+        <Footer minimal />
 
       </div>
     </div>

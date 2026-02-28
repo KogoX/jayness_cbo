@@ -1,7 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  minimal?: boolean;
+}
+
+const Footer: React.FC<FooterProps> = ({ minimal = false }) => {
+  if (minimal) {
+    return (
+      <footer className="bg-gray-900 text-white py-6">
+        <div className="px-4 md:px-8 lg:px-12 text-center text-gray-400 text-sm">
+          <p>© 2026 Jayness Community Based Organization. All rights reserved.</p>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="bg-gray-900 text-white pt-16 pb-8">
       <div className="w-full px-4 md:px-8 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
@@ -98,7 +112,7 @@ const Footer: React.FC = () => {
       </div>
 
       <div className="border-t border-gray-800 pt-8 px-4 md:px-8 lg:px-12 text-center text-gray-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} Jayness Community Based Organization. All rights reserved.</p>
+        <p>© 2026 Jayness Community Based Organization. All rights reserved.</p>
       </div>
     </footer>
   );
