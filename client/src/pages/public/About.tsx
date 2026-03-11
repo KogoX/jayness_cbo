@@ -1,4 +1,5 @@
 import React from 'react';
+import { Eye, Target, Users } from 'lucide-react';
 
 const About: React.FC = () => {
   return (
@@ -15,22 +16,9 @@ const About: React.FC = () => {
 
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-12">
-          <div className="bg-purple-50 p-10 rounded-3xl border border-purple-100">
-            <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center mb-6">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z"
-                />
-              </svg>
+          <div className="bg-purple-50 p-10 rounded-3xl border border-purple-100 transform transition-all duration-300 hover:-translate-y-3 hover:shadow-2xl">
+            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mb-6 shadow-md">
+              <Eye className="w-6 h-6" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Vision</h2>
             <p className="text-gray-700 leading-relaxed">
@@ -39,11 +27,9 @@ const About: React.FC = () => {
             </p>
           </div>
 
-          <div className="bg-green-50 p-10 rounded-3xl border border-green-100">
-            <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center mb-6">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+          <div className="bg-amber-50 p-10 rounded-3xl border border-amber-100 transform transition-all duration-300 hover:-translate-y-3 hover:shadow-2xl">
+            <div className="w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center mb-6 shadow-md">
+              <Target className="w-6 h-6" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Mission</h2>
             <p className="text-gray-700 leading-relaxed">
@@ -54,6 +40,7 @@ const About: React.FC = () => {
         </div>
       </section>
 
+      {/* CORE VALUES */}
       <section className="py-20 bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-16">Our Core Values</h2>
@@ -74,6 +61,7 @@ const About: React.FC = () => {
         </div>
       </section>
 
+      {/* LEADERSHIP */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold text-gray-800 mb-12">Our Leadership</h2>
@@ -98,15 +86,8 @@ const About: React.FC = () => {
               { role: 'Treasurer', name: 'Executive Committee' }
             ].map((exec, idx) => (
               <div key={idx} className="group">
-                <div className="w-48 h-48 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-6 shadow-sm text-gray-500">
-                  <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.8}
-                      d="M17 20h5v-1a4 4 0 00-5-3.87M17 20H7m10 0v-1c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v1m0 0H2v-1a4 4 0 015-3.87M7 20v-1m10-8a3 3 0 11-6 0 3 3 0 016 0zm-10 0a3 3 0 116 0 3 3 0 01-6 0z"
-                    />
-                  </svg>
+                <div className="w-48 h-48 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-6 shadow-sm text-gray-500 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                  <Users className="w-16 h-16" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">{exec.name}</h3>
                 <p className="text-primary font-medium">{exec.role}</p>

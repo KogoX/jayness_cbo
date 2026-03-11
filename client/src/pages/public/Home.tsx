@@ -96,7 +96,7 @@ const Home: React.FC = () => {
       
       {/* 1. HERO SECTION (Loads Instantly) */}
       <section className="relative bg-primary text-white py-24 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 opacity-80 bg-[url('https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2000')] bg-cover bg-center mix-blend-overlay"></div>
+        <div className="absolute inset-0 opacity-80 bg-[url('/assets/jayness.jpg')] bg-cover bg-center"></div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-secondary rounded-full filter blur-3xl opacity-20 translate-x-1/2 -translate-y-1/2"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">

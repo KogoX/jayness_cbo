@@ -3,17 +3,21 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-  "server": "cd server && npm run dev",
-  "client": "cd client && npm run dev",
-  "dev": "concurrently \"npm run server\" \"npm run client\"",
-  "start": "node src/server.js"
-},
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "node src/server.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "icons": "^1.0.0",
+    "lucide-react": "^0.577.0"
   }
 }
