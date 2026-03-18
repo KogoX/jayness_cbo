@@ -97,6 +97,7 @@ const Home: React.FC = () => {
       {/* 1. HERO SECTION (Loads Instantly) */}
       <section className="relative bg-primary text-white py-24 lg:py-32 overflow-hidden">
         <div className="absolute inset-0 opacity-80 bg-[url('/assets/jayness.jpg')] bg-cover bg-center"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-2.png')] opacity-45 mix-blend-multiply pointer-events-none"></div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-secondary rounded-full filter blur-3xl opacity-20 translate-x-1/2 -translate-y-1/2"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
@@ -189,10 +190,11 @@ const Home: React.FC = () => {
       </section>
 
       {/* 4. ABOUT US (Static Summary) */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="py-20 bg-gray-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper-2.png')] opacity-35 pointer-events-none"></div>
+        <div className="relative max-w-7xl mx-auto px-4">
           <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">About Us</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">About Us</h2>
             <p className="text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Jayness Community Based Organization empowers vulnerable and marginalized families through education, health, economic support, and advocacy.
             </p>
@@ -205,7 +207,7 @@ const Home: React.FC = () => {
                 A just, resilient, and inclusive community where every individual can realize their potential and contribute meaningfully to society.
               </p>
             </div>
-            <div className="bg-green-50 border border-green-100 rounded-2xl p-8">
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-8">
               <h3 className="text-2xl font-bold text-gray-800 mb-3">Our Mission</h3>
               <p className="text-gray-700 leading-relaxed">
                 To deliver life-changing services that build dignity, self-reliance, and equal opportunity for all community members.
@@ -213,7 +215,7 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-8 bg-gray-50 border border-gray-100 rounded-2xl p-8">
+          <div className="mt-8 bg-white border border-gray-100 rounded-2xl p-8">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Core Values</h3>
             <div className="flex flex-wrap gap-3">
               {['Integrity', 'Inclusiveness', 'Empowerment', 'Collaboration', 'Accountability'].map((value) => (
@@ -225,7 +227,7 @@ const Home: React.FC = () => {
           </div>
 
           <div className="text-center mt-10">
-            <Link to="/about" className="inline-flex items-center text-primary font-bold hover:text-purple-800 hover:underline text-lg transition">
+            <Link to="/about" className="inline-flex items-center text-gray-900 font-bold hover:text-gray-700 hover:underline text-lg transition">
               Learn More About Us
               <span className="ml-2 text-xl">&rarr;</span>
             </Link>
@@ -404,6 +406,7 @@ const Home: React.FC = () => {
       {/* 7. CALL TO ACTION (Loads Instantly) */}
       <section className="bg-primary py-24 text-white text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/linen.png')] opacity-35 pointer-events-none"></div>
         <div className="relative max-w-4xl mx-auto px-4 z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">"Stronger Together"</h2>
           <p className="text-purple-100 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
