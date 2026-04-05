@@ -10,7 +10,7 @@
     "verify:legacy:apply": "node scripts/markLegacyUsersVerified.js --apply"
   },
   "keywords": [],
-  "author": "",
+  "author": "Kogo Denns",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
